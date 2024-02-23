@@ -506,7 +506,7 @@ class baseModel():
                 predicted.extend(preds.data.tolist())
                 actual.extend(d['label'].tolist())
 
-        return predicted, actual, torch.tensor(loss).item()/totalCount
+        return predicted, actual, loss.clone().detach().item()/totalCount
 
     def calculateResults(self, yPredicted, yActual, classes = None):
         '''
