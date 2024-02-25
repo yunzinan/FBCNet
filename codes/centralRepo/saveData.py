@@ -17,6 +17,7 @@ import resampy
 import shutil
 import urllib.request as request
 from contextlib import closing
+from sklearn.model_selection import train_test_split
 
 masterPath = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(1, os.path.join(masterPath, 'centralRepo')) # To load all the relevant files
@@ -83,6 +84,92 @@ def parseBci42aFile(dataPath, labelPath, epochWindow = [0,4], chans = list(range
     data = {'x': x, 'y': y, 'c': np.array(raw_gdf.info['ch_names'])[chans].tolist(), 's': fs}
     return data
 
+def parseLyhFile(dataPath, labelPath, epochWindow = [0,4], chans = list(range(22))):
+    '''
+    Parse the lyh data file and return an epoched data. 
+
+    Parameters
+    ----------
+    dataPath : str
+        [Note] deprecated
+        path to the preprocessed file.
+    labelPath : str
+        [Note] deprecated
+        path to the labels mat file.
+    epochWindow : list, optional
+        [Note] deprecated
+        time segment to extract in seconds. The default is [0,4].
+    chans  : 
+        [Note] deprecated
+        list : channels to select from the data. 
+    
+    Returns
+    -------
+    a tuple of (train_data, test_data)
+    data : an EEG structure with following fields:
+        x: 3d np array with epoched EEG data : chan x time x trials
+        y: 1d np array containing trial labels starting from 0
+        s: float, sampling frequency
+        c: list of channels - can be list of ints. 
+    '''
+
+    fs = 250
+
+    # get all the data first
+    left_raw = np.load('./data/lyh/originalData/left_processed.npy') # label: 0
+    right_raw = np.load('./data/lyh/originalData/right_processed.npy') # label: 1
+    leg_raw = np.load('./data/lyh/originalData/left_processed.npy') # label: 2
+    nothing_raw = np.load('./data/lyh/originalData/nothing_processed.npy') # label: 3
+    eeg_raw = [left_raw, right_raw, leg_raw, nothing_raw]
+
+    X_tot = []
+    y_tot = []
+
+
+    for i in range(4):
+        # XXX: fixed the bug that you cannot simply reshape the files
+        # tmp = eeg_raw[i].reshape(15, 300, -1) # (15, 30_0000) => (15, 300, 1000)
+        # goal: (15, 30_0000) => (15, 300, 1000)
+        trial_list = []
+        for idx in range(300):
+            trial_list.append(eeg_raw[i][:, idx * 1000:(idx + 1) * 1000]) # [1000:2000]
+        # now we have of a list of len 300, w/ each of shape (15, 1000)
+        tmp = np.stack(trial_list) # should give a shape of (300, 15, 1000)
+        X_raw = tmp[:, :14, :] # filter the channels, only need the first 14 channels
+        # (300, 14, 1000)
+        y_raw = np.array([i for j in range(300)]) # (300,) value = label
+        X_tot.append(X_raw)
+        y_tot.append(y_raw)
+
+
+    X_tot = np.concatenate(X_tot)
+    y_tot = np.concatenate(y_tot)
+
+    train_data = X_tot # (1200, 14, 1000)
+    train_label = y_tot.reshape(1200, 1) # (1200, 1)
+        
+    allData = train_data # (1200, 14, 1000)
+    allLabel = train_label.squeeze() # (1200, )
+
+    shuffle_num = np.random.permutation(len(allData))
+    # print(f"Shuffle num {shuffle_num}")
+    allData = allData[shuffle_num, :, :]
+    allLabel = allLabel[shuffle_num]
+
+    X_train, X_test, y_train, y_test = train_test_split(allData, allLabel, train_size=0.7,
+                                                                random_state=None, shuffle=True)
+
+    # now transpose the dimension to (n_chans, n_times, n_trial)
+    # allData = allData.transpose((1, 2, 0))
+    X_train = X_train.transpose((1, 2, 0))
+    X_test = X_test.transpose((1, 2, 0))
+    
+    # TODO: here, I just put the channels info to None, needs further configuration
+    # data = {'x': allData, 'y': allLabel, 'c': None, 's': fs}
+    train_data = {'x': X_train, 'y': y_train, 'c': [i for i in range(14)], 's': fs}
+    test_data = {'x': X_test, 'y': y_test, 'c': [i for i in range(14)], 's': fs}
+    #(n_chan, 1000, n_trials)
+    return train_data, test_data 
 
 def parseBci42aDataset(datasetPath, savePath, 
                        epochWindow = [0,4], chans = list(range(22)), verbos = False):
@@ -128,6 +215,40 @@ def parseBci42aDataset(datasetPath, savePath,
                 os.path.join(datasetPath, sub+'.mat'), 
                 epochWindow = epochWindow, chans = chans)
             savemat(os.path.join(savePath, subL[iSubs]+str(iSub+1).zfill(3)+'.mat'), data)
+
+def parseLyhDataset(datasetPath, savePath, 
+                       epochWindow = [0,4], chans = list(range(14)), verbos = False):
+    '''
+    Parse the lyh Dataset in a MATLAB formate that will be used in the next analysis
+
+    Parameters
+    ----------
+    datasetPath : str
+        Path to the BCI IV2a original dataset in gdf formate.
+    savePath : str
+        Path on where to save the epoched eeg data in a mat format.
+    epochWindow : list, optional
+        time segment to extract in seconds. The default is [0,4].
+    chans  : list : channels to select from the data.
+
+    Returns
+    -------
+    None. 
+    The dataset will be saved at savePath.
+
+    '''
+    if not os.path.exists(savePath):
+        os.makedirs(savePath)
+    print('Processed data be saved in folder : ' + savePath)
+            
+    train_data, test_data = parseLyhFile(None, None, 
+                        epochWindow = epochWindow, chans = chans)
+    
+    print(train_data['x'].shape, train_data['y'].shape,
+          test_data['x'].shape,  test_data['y'].shape)
+
+    savemat(os.path.join(savePath, "s"+str(1).zfill(3)+'.mat'), train_data)
+    savemat(os.path.join(savePath, "se"+str(1).zfill(3)+'.mat'), test_data)
 
 def fetchAndParseKoreaFile(dataPath, url = None, epochWindow = [0,4],
                            chans = [7,32, 8, 9, 33, 10, 34, 12, 35, 13, 36, 14, 37, 17, 38, 18, 39, 19, 40, 20],
@@ -463,6 +584,7 @@ def fetchData(dataFolder, datasetId = 0):
         id of the dataset:
             0 : bci42a data (default)
 			1 : korea data
+            2 : lyh
         
     Returns
     -------
@@ -489,6 +611,8 @@ def fetchData(dataFolder, datasetId = 0):
                   'Please make sure that you have ~60GB Internet bandwidth and 80 GB space ' +
                   'the data size is ~60GB so its going to take a while ' +
                   'Meanwhile you can take a nap!')
+        elif datasetId ==2:
+            print("The lyh dataset doesn\'t exist at path")
     else:
         oDataLen = len([name for name in os.listdir(os.path.join(dataFolder, oDataFolder)) 
                         if os.path.isfile(os.path.join(dataFolder, oDataFolder, name))])
@@ -506,7 +630,7 @@ def fetchData(dataFolder, datasetId = 0):
                   ' the data size is ~60GB so its going to take a while' +
                   ' Meanwhile you can take a nap!')
             parseKoreaDataset(os.path.join(dataFolder, oDataFolder), os.path.join(dataFolder, rawMatFolder))
-
+        # TODO: there should add a check of the lyh dataset, which I omitted.
         
             
    # Check if the processed mat data exists:
@@ -516,6 +640,9 @@ def fetchData(dataFolder, datasetId = 0):
             parseBci42aDataset( os.path.join(dataFolder, oDataFolder), os.path.join(dataFolder, rawMatFolder))
         elif datasetId ==1:
             parseKoreaDataset(os.path.join(dataFolder, oDataFolder), os.path.join(dataFolder, rawMatFolder))
+        elif datasetId ==2:
+            # TODO: parseLyhDataset()
+            parseLyhDataset(os.path.join(dataFolder, oDataFolder), os.path.join(dataFolder, rawMatFolder))
 
     # Check if the processed python data exists:
     if not os.path.exists(os.path.join(dataFolder, rawPythonFolder, 'dataLabels.csv')):
@@ -540,4 +667,4 @@ def fetchData(dataFolder, datasetId = 0):
 
 # parseKoreaDataset('/home/ravi/FBCNetToolbox/data/korea/originalData','/home/ravi/FBCNetToolbox/data/korea/rawMat')
 
-# %%
+# # %%
