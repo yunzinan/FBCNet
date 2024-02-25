@@ -122,9 +122,13 @@ def parseLyhFile(dataPath, labelPath, epochWindow = [0,4], chans = list(range(22
     nothing_raw = np.load('./data/lyh/originalData/nothing_processed.npy') # label: 3
     eeg_raw = [left_raw, right_raw, leg_raw, nothing_raw]
 
-    X_tot = []
-    y_tot = []
-
+    # X_tot = []
+    # y_tot = []
+    X_train_tot = []
+    X_test_tot = []
+    y_train_tot = []
+    y_test_tot = []
+    train_ratio = 0.8 # so that 80% trainset, the rest testset
 
     for i in range(4):
         # XXX: fixed the bug that you cannot simply reshape the files
@@ -138,26 +142,44 @@ def parseLyhFile(dataPath, labelPath, epochWindow = [0,4], chans = list(range(22
         X_raw = tmp[:, :14, :] # filter the channels, only need the first 14 channels
         # (300, 14, 1000)
         y_raw = np.array([i for j in range(300)]) # (300,) value = label
-        X_tot.append(X_raw)
-        y_tot.append(y_raw)
+        # now shuffle the 300 samples 
+        shuffle_idx = np.random.permutation(len(X_raw))
+        X_raw = X_raw[shuffle_idx, :, :]
+        y_raw = y_raw[shuffle_idx] # although no changes will be made
+        # X_tot.append(X_raw)
+        # y_tot.append(y_raw)
+        split_idx = int(300 * train_ratio)
+        X_train_tot.append(X_raw[:split_idx])
+        X_test_tot.append(X_raw[split_idx:])
+        y_train_tot.append(y_raw[:split_idx])
+        y_test_tot.append(y_raw[split_idx:])
 
 
-    X_tot = np.concatenate(X_tot)
-    y_tot = np.concatenate(y_tot)
+    # X_tot = np.concatenate(X_tot)
+    # y_tot = np.concatenate(y_tot)
+    X_train_tot = np.concatenate(X_train_tot) # (960, 14, 1000)
+    X_test_tot = np.concatenate(X_test_tot) # (240, 14, 1000)
+    y_train_tot = np.concatenate(y_train_tot) # (960,)
+    y_test_tot = np.concatenate(y_test_tot) # (240,)
 
-    train_data = X_tot # (1200, 14, 1000)
-    train_label = y_tot.reshape(1200, 1) # (1200, 1)
+    # train_data = X_tot # (1200, 14, 1000)
+    # train_label = y_tot.reshape(1200, 1) # (1200, 1)
         
-    allData = train_data # (1200, 14, 1000)
-    allLabel = train_label.squeeze() # (1200, )
+    # allData = train_data # (1200, 14, 1000)
+    # allLabel = train_label.squeeze() # (1200, )
 
-    shuffle_num = np.random.permutation(len(allData))
+    shuffle_num = np.random.permutation(len(X_train_tot))
+    X_train = X_train_tot[shuffle_num, :, :]
+    y_train = y_train_tot[shuffle_num]
+    shuffle_num = np.random.permutation(len(X_test_tot))
+    X_test = X_test_tot[shuffle_num, :, :]
+    y_test = y_test_tot[shuffle_num]
     # print(f"Shuffle num {shuffle_num}")
-    allData = allData[shuffle_num, :, :]
-    allLabel = allLabel[shuffle_num]
+    # allData = allData[shuffle_num, :, :]
+    # allLabel = allLabel[shuffle_num]
 
-    X_train, X_test, y_train, y_test = train_test_split(allData, allLabel, train_size=0.7,
-                                                                random_state=None, shuffle=True)
+    # X_train, X_test, y_train, y_test = train_test_split(allData, allLabel, train_size=0.8,
+    #                                                             random_state=None, shuffle=False)
 
     # now transpose the dimension to (n_chans, n_times, n_trial)
     # allData = allData.transpose((1, 2, 0))
