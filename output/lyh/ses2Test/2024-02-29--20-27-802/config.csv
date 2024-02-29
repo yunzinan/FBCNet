@@ -1,0 +1,19 @@
+preloadData,False
+randSeed,20190821
+network,FBCNet
+batchSize,16
+modelArguments,"{'nChan': 14, 'nTime': 250, 'dropoutP': 0.5, 'nBands': 9, 'm': 32, 'temporalLayer': 'LogVarLayer', 'nClass': 4, 'doWeightNorm': True}"
+modelTrainArguments,"{'stopCondi': {'c': {'Or': {'c1': {'MaxEpoch': {'maxEpochs': 1500, 'varName': 'epoch'}}, 'c2': {'NoDecrease': {'numEpochs': 200, 'varName': 'valInacc'}}}}}, 'classes': [0, 1, 2, 3], 'sampler': 'RandomSampler', 'loadBestModel': True, 'bestVarToCheck': 'valInacc', 'continueAfterEarlystop': True, 'lr': 0.001}"
+transformArguments,
+cv,trainTest
+kFold,1
+data,raw
+subTorun,
+trainDataToUse,1
+validationSet,0.2
+loadNetInitState,False
+pathNetInitState,/mnt/workspace/FBCNet-yunzinan/codes/netInitModels/FBCNet_2.pth
+inDataPath,/mnt/workspace/FBCNet-yunzinan/data/lyh/multiviewPython
+inLabelPath,/mnt/workspace/FBCNet-yunzinan/data/lyh/multiviewPython/dataLabels.csv
+outPath,/mnt/workspace/FBCNet-yunzinan/output/lyh/ses2Test/2024-02-29--20-27-802/
+netInitStateExists,True

@@ -50,7 +50,7 @@ def ho(datasetId = None, network = None, nGPU = None, subTorun=None):
     
     # Network related details
     config['network'] = network
-    config['batchSize'] = 16
+    config['batchSize'] = 80
     
     if datasetId == 1:
         config['modelArguments'] = {'nChan': 20, 'nTime': 1000, 'dropoutP': 0.5,
