@@ -3,6 +3,13 @@
 - follow the `./Instruction` to setup required environments
 - the sugguested python version is python3.7
 
+# Description
+
+branch:
+
+- `master`: in-session, 4-class
+- `cross`: cross-session, 4-class
+- `cross-3c`: cross-session, 3-class(w/o *nothing*)
 
 # Usage
 
@@ -24,4 +31,7 @@ all training results are tracked in the folder `./output`.
 
 - in-session:
   - lyh_dataset_v2(4class, 300trials/class): test accuracy: 95.42%
-  - lyh_dataset_v3(4class, 500trials/class): test accuracy: 99.75% 
+  - lyh_dataset_v3(4class, 500trials/class): test accuracy: 99.75%
+- cross-session(4class):
+  - train on v3, test on v2: test accuracy: 35.9%
+  - train on v2, test on v3: test accuracy: 40.5%
