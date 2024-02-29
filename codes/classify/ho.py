@@ -64,7 +64,7 @@ def ho(datasetId = None, network = None, nGPU = None, subTorun=None):
     elif datasetId == 2:
         config['modelArguments'] = {'nChan': 14, 'nTime': 1000, 'dropoutP': 0.5,
                                     'nBands':9, 'm' : 32, 'temporalLayer': 'LogVarLayer',
-                                    'nClass': 4, 'doWeightNorm': True}
+                                    'nClass':3, 'doWeightNorm': True}
 
     # Training related details    
     config['modelTrainArguments'] = {'stopCondi':  {'c': {'Or': {'c1': {'MaxEpoch': {'maxEpochs': 1500, 'varName' : 'epoch'}},
@@ -72,8 +72,10 @@ def ho(datasetId = None, network = None, nGPU = None, subTorun=None):
           'classes': [0,1], 'sampler' : 'RandomSampler', 'loadBestModel': True,
           'bestVarToCheck': 'valInacc', 'continueAfterEarlystop':True,'lr': 1e-3}
             
-    if datasetId ==0 or datasetId == 2:
+    if datasetId ==0:
         config['modelTrainArguments']['classes'] = [0,1,2,3] # 4 class data
+    if datasetId ==2:
+        config['modelTrainArguments']['classes'] = [0,1,2] # 3 class data
 
     config['transformArguments'] = None
 
@@ -86,7 +88,7 @@ def ho(datasetId = None, network = None, nGPU = None, subTorun=None):
     config['validationSet'] = 0.2   # how much of the training data will be used a validation set
 
     # network initialization details:
-    config['loadNetInitState'] = True 
+    config['loadNetInitState'] = False 
     config['pathNetInitState'] = config['network'] + '_'+ str(datasetId)
 
     #%% Define data path things here. Do it once and forget it!
@@ -279,7 +281,9 @@ def ho(datasetId = None, network = None, nGPU = None, subTorun=None):
         # Call the network for training
         setRandom(config['randSeed'])
         net = network(**config['modelArguments'])
-        net.load_state_dict(netInitState, strict=False)
+        # XXX: seems a bug
+        if config['loadNetInitState']:
+            net.load_state_dict(netInitState, strict=False)
         
         outPathSub = os.path.join(config['outPath'], 'sub'+ str(iSub))
         model = baseModel(net=net, resultsSavePath=outPathSub, batchSize= config['batchSize'], nGPU = nGPU)
