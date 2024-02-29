@@ -84,71 +84,73 @@ def parseBci42aFile(dataPath, labelPath, epochWindow = [0,4], chans = list(range
     data = {'x': x, 'y': y, 'c': np.array(raw_gdf.info['ch_names'])[chans].tolist(), 's': fs}
     return data
 
-def parseLyhFile(dataPath, labelPath, epochWindow = [0,4], chans = list(range(22))):
+def parseLyhFile(sessionId, epochWindow = [0,4], chans = list(range(22))):    
     '''
-    Parse the lyh data file and return an epoched data. 
+    parse the lyh dataset original data
 
     Parameters
     ----------
-    dataPath : str
-        [Note] deprecated
-        path to the preprocessed file.
-    labelPath : str
-        [Note] deprecated
-        path to the labels mat file.
-    epochWindow : list, optional
-        [Note] deprecated
-        time segment to extract in seconds. The default is [0,4].
-    chans  : 
-        [Note] deprecated
-        list : channels to select from the data. 
-    
-    Returns
-    -------
-    a tuple of (train_data, test_data)
-    data : an EEG structure with following fields:
-        x: 3d np array with epoched EEG data : chan x time x trials
-        y: 1d np array containing trial labels starting from 0
-        s: float, sampling frequency
-        c: list of channels - can be list of ints. 
+    sessionId: str
+        "v2" refers to the 300 trials/task batch, "v3" refers to the 500 ones
+    epochWindow: list, optional
+        deprecated now.
+    chans: list, optional
+        not used for now.
     '''
-
-    fs = 250
-
-    # get all the data first
-    left_raw = np.load('./data/lyh/originalData/left_processed.npy') # label: 0
-    right_raw = np.load('./data/lyh/originalData/right_processed.npy') # label: 1
-    leg_raw = np.load('./data/lyh/originalData/left_processed.npy') # label: 2
-    nothing_raw = np.load('./data/lyh/originalData/nothing_processed.npy') # label: 3
-    eeg_raw = [left_raw, right_raw, leg_raw, nothing_raw]
-
     # X_tot = []
     # y_tot = []
+
+    dir_path = "data/lyh/originalData"
+    left_v2_fp = "left_processed_v2(300).npy"
+    left_v3_fp = "left_processed_v3(500).npy"
+    right_v2_fp = "right_processed_v2(300).npy"
+    right_v3_fp = "right_processed_v3(500).npy"
+    leg_v2_fp = "leg_processed_v2(300).npy"
+    leg_v3_fp = "leg_processed_v3(500).npy"
+    nothing_v2_fp = "nothing_processed_v2(300).npy"
+    nothing_v3_fp = "nothing_processed_v3(500).npy"
+    
+    # get all the data first
+    left_v2 = np.load(os.path.join(dir_path, left_v2_fp))
+    left_v3 = np.load(os.path.join(dir_path, left_v3_fp))
+    right_v2 = np.load(os.path.join(dir_path, right_v2_fp))
+    right_v3 = np.load(os.path.join(dir_path, right_v3_fp))
+    leg_v2 = np.load(os.path.join(dir_path, leg_v2_fp))
+    leg_v3 = np.load(os.path.join(dir_path, leg_v3_fp))
+    nothing_v2 = np.load(os.path.join(dir_path, nothing_v2_fp))
+    nothing_v3 = np.load(os.path.join(dir_path, nothing_v3_fp))
+    eeg_raw_v2 = [left_v2, right_v2, leg_v2, nothing_v2]
+    eeg_raw_v3 = [left_v3, right_v3, leg_v3, nothing_v3]
+
+    fs = 250
     X_train_tot = []
     X_test_tot = []
     y_train_tot = []
     y_test_tot = []
     train_ratio = 0.8 # so that 80% trainset, the rest testset
+    eeg_raw = eeg_raw_v2 if sessionId == "v2" else eeg_raw_v3
 
     for i in range(4):
         # XXX: fixed the bug that you cannot simply reshape the files
         # tmp = eeg_raw[i].reshape(15, 300, -1) # (15, 30_0000) => (15, 300, 1000)
         # goal: (15, 30_0000) => (15, 300, 1000)
         trial_list = []
-        for idx in range(300):
+        n_trial = eeg_raw[0].shape[1] // 1000 # number of trials in the npy file
+        print(f"load {n_trial} trials in the file.")
+        for idx in range(n_trial):
             trial_list.append(eeg_raw[i][:, idx * 1000:(idx + 1) * 1000]) # [1000:2000]
         # now we have of a list of len 300, w/ each of shape (15, 1000)
         tmp = np.stack(trial_list) # should give a shape of (300, 15, 1000)
         X_raw = tmp[:, :14, :] # filter the channels, only need the first 14 channels
         # (300, 14, 1000)
-        y_raw = np.array([i for j in range(300)]) # (300,) value = label
+        y_raw = np.array([i for j in range(n_trial)]) # (300,) value = label
         # now shuffle the 300 samples 
         shuffle_idx = np.random.permutation(len(X_raw))
         X_raw = X_raw[shuffle_idx, :, :]
         y_raw = y_raw[shuffle_idx] # although no changes will be made
         # X_tot.append(X_raw)
         # y_tot.append(y_raw)
-        split_idx = int(300 * train_ratio)
+        split_idx = int(n_trial * train_ratio)
         X_train_tot.append(X_raw[:split_idx])
         X_test_tot.append(X_raw[split_idx:])
         y_train_tot.append(y_raw[:split_idx])
@@ -263,14 +265,21 @@ def parseLyhDataset(datasetPath, savePath,
         os.makedirs(savePath)
     print('Processed data be saved in folder : ' + savePath)
             
-    train_data, test_data = parseLyhFile(None, None, 
+    train_data, test_data = parseLyhFile(sessionId="v2", 
                         epochWindow = epochWindow, chans = chans)
+    train_data_v3, test_data_v3 = parseLyhFile(sessionId="v3", 
+                        epochWindow= epochWindow, chans=chans)
     
     print(train_data['x'].shape, train_data['y'].shape,
           test_data['x'].shape,  test_data['y'].shape)
 
+    print(train_data_v3['x'].shape, train_data_v3['y'].shape,
+          test_data_v3['x'].shape,  test_data_v3['y'].shape)
+
     savemat(os.path.join(savePath, "s"+str(1).zfill(3)+'.mat'), train_data)
     savemat(os.path.join(savePath, "se"+str(1).zfill(3)+'.mat'), test_data)
+    savemat(os.path.join(savePath, "s"+str(2).zfill(3)+'.mat'), train_data_v3)
+    savemat(os.path.join(savePath, "se"+str(2).zfill(3)+'.mat'), test_data_v3)
 
 def fetchAndParseKoreaFile(dataPath, url = None, epochWindow = [0,4],
                            chans = [7,32, 8, 9, 33, 10, 34, 12, 35, 13, 36, 14, 37, 17, 38, 18, 39, 19, 40, 20],

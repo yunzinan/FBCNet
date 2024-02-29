@@ -86,7 +86,7 @@ def ho(datasetId = None, network = None, nGPU = None, subTorun=None):
     config['validationSet'] = 0.2   # how much of the training data will be used a validation set
 
     # network initialization details:
-    config['loadNetInitState'] = True
+    config['loadNetInitState'] = True 
     config['pathNetInitState'] = config['network'] + '_'+ str(datasetId)
 
     #%% Define data path things here. Do it once and forget it!
