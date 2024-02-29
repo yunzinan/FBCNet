@@ -123,10 +123,12 @@ def parseLyhFile(sessionId, epochWindow = [0,4], chans = list(range(22))):
     eeg_raw_v3 = [left_v3, right_v3, leg_v3, nothing_v3]
 
     fs = 250
-    X_train_tot = []
-    X_test_tot = []
-    y_train_tot = []
-    y_test_tot = []
+    # X_train_tot = []
+    # X_test_tot = []
+    # y_train_tot = []
+    # y_test_tot = []
+    X_tot = []
+    y_tot = []
     train_ratio = 0.8 # so that 80% trainset, the rest testset
     eeg_raw = eeg_raw_v2 if sessionId == "v2" else eeg_raw_v3
 
@@ -148,21 +150,21 @@ def parseLyhFile(sessionId, epochWindow = [0,4], chans = list(range(22))):
         shuffle_idx = np.random.permutation(len(X_raw))
         X_raw = X_raw[shuffle_idx, :, :]
         y_raw = y_raw[shuffle_idx] # although no changes will be made
-        # X_tot.append(X_raw)
-        # y_tot.append(y_raw)
-        split_idx = int(n_trial * train_ratio)
-        X_train_tot.append(X_raw[:split_idx])
-        X_test_tot.append(X_raw[split_idx:])
-        y_train_tot.append(y_raw[:split_idx])
-        y_test_tot.append(y_raw[split_idx:])
+        X_tot.append(X_raw)
+        y_tot.append(y_raw)
+        # split_idx = int(n_trial * train_ratio)
+        # X_train_tot.append(X_raw[:split_idx])
+        # X_test_tot.append(X_raw[split_idx:])
+        # y_train_tot.append(y_raw[:split_idx])
+        # y_test_tot.append(y_raw[split_idx:])
 
 
-    # X_tot = np.concatenate(X_tot)
-    # y_tot = np.concatenate(y_tot)
-    X_train_tot = np.concatenate(X_train_tot) # (960, 14, 1000)
-    X_test_tot = np.concatenate(X_test_tot) # (240, 14, 1000)
-    y_train_tot = np.concatenate(y_train_tot) # (960,)
-    y_test_tot = np.concatenate(y_test_tot) # (240,)
+    X_tot = np.concatenate(X_tot)
+    y_tot = np.concatenate(y_tot)
+    # X_train_tot = np.concatenate(X_train_tot) # (960, 14, 1000)
+    # X_test_tot = np.concatenate(X_test_tot) # (240, 14, 1000)
+    # y_train_tot = np.concatenate(y_train_tot) # (960,)
+    # y_test_tot = np.concatenate(y_test_tot) # (240,)
 
     # train_data = X_tot # (1200, 14, 1000)
     # train_label = y_tot.reshape(1200, 1) # (1200, 1)
@@ -170,12 +172,14 @@ def parseLyhFile(sessionId, epochWindow = [0,4], chans = list(range(22))):
     # allData = train_data # (1200, 14, 1000)
     # allLabel = train_label.squeeze() # (1200, )
 
-    shuffle_num = np.random.permutation(len(X_train_tot))
-    X_train = X_train_tot[shuffle_num, :, :]
-    y_train = y_train_tot[shuffle_num]
-    shuffle_num = np.random.permutation(len(X_test_tot))
-    X_test = X_test_tot[shuffle_num, :, :]
-    y_test = y_test_tot[shuffle_num]
+    shuffle_num = np.random.permutation(len(X_tot))
+    # X_train = X_train_tot[shuffle_num, :, :]
+    X = X_tot[shuffle_num, :, :]
+    y = y_tot[shuffle_num]
+    # y_train = y_train_tot[shuffle_num]
+    # shuffle_num = np.random.permutation(len(X_test_tot))
+    # X_test = X_test_tot[shuffle_num, :, :]
+    # y_test = y_test_tot[shuffle_num]
     # print(f"Shuffle num {shuffle_num}")
     # allData = allData[shuffle_num, :, :]
     # allLabel = allLabel[shuffle_num]
@@ -185,15 +189,16 @@ def parseLyhFile(sessionId, epochWindow = [0,4], chans = list(range(22))):
 
     # now transpose the dimension to (n_chans, n_times, n_trial)
     # allData = allData.transpose((1, 2, 0))
-    X_train = X_train.transpose((1, 2, 0))
-    X_test = X_test.transpose((1, 2, 0))
+    # X_train = X_train.transpose((1, 2, 0))
+    # X_test = X_test.transpose((1, 2, 0))
+    X = X.transpose((1, 2, 0))
     
     # TODO: here, I just put the channels info to None, needs further configuration
-    # data = {'x': allData, 'y': allLabel, 'c': None, 's': fs}
-    train_data = {'x': X_train, 'y': y_train, 'c': [i for i in range(14)], 's': fs}
-    test_data = {'x': X_test, 'y': y_test, 'c': [i for i in range(14)], 's': fs}
+    data = {'x': X, 'y': y, 'c': [i for i in range(14)], 's': fs}
+    # train_data = {'x': X_train, 'y': y_train, 'c': [i for i in range(14)], 's': fs}
+    # test_data = {'x': X_test, 'y': y_test, 'c': [i for i in range(14)], 's': fs}
     #(n_chan, 1000, n_trials)
-    return train_data, test_data 
+    return data
 
 def parseBci42aDataset(datasetPath, savePath, 
                        epochWindow = [0,4], chans = list(range(22)), verbos = False):
@@ -265,21 +270,20 @@ def parseLyhDataset(datasetPath, savePath,
         os.makedirs(savePath)
     print('Processed data be saved in folder : ' + savePath)
             
-    train_data, test_data = parseLyhFile(sessionId="v2", 
-                        epochWindow = epochWindow, chans = chans)
-    train_data_v3, test_data_v3 = parseLyhFile(sessionId="v3", 
-                        epochWindow= epochWindow, chans=chans)
+    train_data = parseLyhFile(sessionId="v2", 
+                        epochWindow=epochWindow, chans=chans)
+    test_data = parseLyhFile(sessionId="v3", 
+                        epochWindow=epochWindow, chans=chans)
+    
     
     print(train_data['x'].shape, train_data['y'].shape,
           test_data['x'].shape,  test_data['y'].shape)
 
-    print(train_data_v3['x'].shape, train_data_v3['y'].shape,
-          test_data_v3['x'].shape,  test_data_v3['y'].shape)
+    # print(train_data_v3['x'].shape, train_data_v3['y'].shape,
+    #       test_data_v3['x'].shape,  test_data_v3['y'].shape)
 
     savemat(os.path.join(savePath, "s"+str(1).zfill(3)+'.mat'), train_data)
     savemat(os.path.join(savePath, "se"+str(1).zfill(3)+'.mat'), test_data)
-    savemat(os.path.join(savePath, "s"+str(2).zfill(3)+'.mat'), train_data_v3)
-    savemat(os.path.join(savePath, "se"+str(2).zfill(3)+'.mat'), test_data_v3)
 
 def fetchAndParseKoreaFile(dataPath, url = None, epochWindow = [0,4],
                            chans = [7,32, 8, 9, 33, 10, 34, 12, 35, 13, 36, 14, 37, 17, 38, 18, 39, 19, 40, 20],
