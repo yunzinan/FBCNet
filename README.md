@@ -3,9 +3,9 @@
 - follow the `./Instruction` to setup required environments
 - the sugguested python version is python3.7
 
-# Discription
+# Description
 
-Branch:
+branch:
 
 - `master`: in-session, 4-class
 - `cross`: cross-session, 4-class
