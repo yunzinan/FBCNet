@@ -12,7 +12,7 @@
 4. run the training and evaluation code `python ./code/classify/ho.py 2 'FBCNet'`
 
 
-If you want to clean the generated data files in `./data/lyh/`. i.e. files in folders such as `rawMat/`, you may run the shell script `./clean.sh` to automatically remove those files and redo the previous commands.
+If you want to clean the generated data files in `./data/lyh/`. i.e. files in folders such as `rawMat/`, you may run the shell script `./clean.sh` to automatically remove those files and rerun the training commands.
 
 
 # Results
