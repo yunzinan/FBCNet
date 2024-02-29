@@ -141,7 +141,7 @@ def parseLyhFile(sessionId, epochWindow = [0,4], chans = list(range(22))):
             trial_list.append(eeg_raw[i][:, idx * 1000:(idx + 1) * 1000]) # [1000:2000]
         # now we have of a list of len 300, w/ each of shape (15, 1000)
         tmp = np.stack(trial_list) # should give a shape of (300, 15, 1000)
-        X_raw = tmp[:, :14, :] # filter the channels, only need the first 14 channels
+        X_raw = tmp[:, :14, :] # filter the channels, only need the first 14 channels, XXX: also, extract the [0, 1] out of [0, 4]
         # (300, 14, 1000)
         y_raw = np.array([i for j in range(n_trial)]) # (300,) value = label
         # now shuffle the 300 samples 
