@@ -1,38 +1,27 @@
-# FBCNet
-## FBCNet: An Efficient Multi-view Convolutional Neural Network for Brain-Computer Interface
+# Preliminaries
 
-This is the PyTorch implementation of the FBCNet architecture for EEG-BCI classification. 
-
-# FBCNet: Architecture
-
-![The FBCNet architecture](/FBCNet-V2.png)
-
-FBCNet is designed with the aim of effectively extracting the spectro-spatial discriminative information which is the signature of EEG-MI while avoiding the problem of overfitting in the presence of small datasets. In its core, FBCNet architecture is composed of the following four stages: 
+- follow the `./Instruction` to setup required environments
+- the sugguested python version is python3.7
 
 
-1. Multi-view data representation: The multi-view representation of the EEG data is obtained by spectrally filtering the raw EEG with multiple narrow-band filters. 
-1. Spatial transformation learning: The spatial discriminative patterns for every view are then learned using a Depthwise Convolution layer. 
-1. Temporal feature extraction: Following spatial transformation, a novel Variance layer is used to effectively extract the temporal information.
-1. Classification: A fully connected (FC) layer finally classifies features from Variance layer into given classes.
+# Usage
 
-The multi-view EEG representation followed by the spatial filtering allows extraction of spectro-spatial discriminative features and variance layer provides a compact representation of the temporal information.
+1. goto `./FBCNet` directory
+2. create foler `./data/lyh/originalData`
+3. copy all lyh dataset(including lyh_dataset_v2 AND lyh_dataset_v3) to the folder(`./data/lyh/originalData/`)
+4. run the training and evaluation code `python ./code/classify/ho.py 2 'FBCNet'`
 
-## FBCNet: Toolbox
 
-This repository is designed as a toolbox that provides all the necessary tools for training and testing of BCI classification networks. All the core functionalities are defined in the codes directory. The package requirements to run all the codes are provided in file req.text. The complete instructions for utilising this toolbox are provided in instructions.txt. 
+If you want to clean the generated data files in `./data/lyh/`. i.e. files in folders such as `rawMat/`, you may run the shell script `./clean.sh` to automatically remove those files and redo the previous commands.
 
-The cv.py and ho.py in /codes/classify/ are the entry points to use this toolbox.
 
-## FBCNet: Results
-The classification results for FBCNet and other competing architectures are as follows:
-![The FBCNet results](/results.png)
+# Results
 
-## Cite:
-If you find this architecture or toolbox useful then please cite this paper:
+all training results are tracked in the folder `./output`. 
 
-Mane, Ravikiran, Effie Chew, Karen Chua, Kai Keng Ang, Neethu Robinson, A. Prasad Vinod, Seong-Whan Lee, and Cuntai Guan. "FBCNet: A Multi-view Convolutional Neural Network for Brain-Computer Interface." arXiv preprint arXiv:2104.01233 (2021).
 
-*Ravikiran Mane, Effie Chew, Karen Chua, Kai Keng Ang, Neethu Robinson, A.P. Vinod, Seong-Whan Lee, and Cuntai Guan, **"FBCNet: An Efficient Multi-view Convolutional Neural Network for Brain-Computer Interface,"** arXiv preprint arXiv:2104.01233 (2021) https://arxiv.org/abs/2104.01233*
+# Performance
 
-## Acknowledgment
-We thank Ding Yi for the assistance in code preparation. 
+- in-session:
+  - lyh_dataset_v2(4class, 300trials/class): test accuracy: 95.42%
+  - lyh_dataset_v3(4class, 500trials/class): test accuracy: 99.75% 
