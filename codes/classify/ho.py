@@ -50,7 +50,7 @@ def ho(datasetId = None, network = None, nGPU = None, subTorun=None):
     
     # Network related details
     config['network'] = network
-    config['batchSize'] = 16
+    config['batchSize'] = 80
     
     if datasetId == 1:
         config['modelArguments'] = {'nChan': 20, 'nTime': 1000, 'dropoutP': 0.5,
@@ -62,7 +62,7 @@ def ho(datasetId = None, network = None, nGPU = None, subTorun=None):
                                     'nClass': 4, 'doWeightNorm': True}
     
     elif datasetId == 2:
-        config['modelArguments'] = {'nChan': 14, 'nTime': 1000, 'dropoutP': 0.5,
+        config['modelArguments'] = {'nChan': 14, 'nTime': 250, 'dropoutP': 0.5,
                                     'nBands':9, 'm' : 32, 'temporalLayer': 'LogVarLayer',
                                     'nClass': 4, 'doWeightNorm': True}
 
@@ -86,7 +86,7 @@ def ho(datasetId = None, network = None, nGPU = None, subTorun=None):
     config['validationSet'] = 0.2   # how much of the training data will be used a validation set
 
     # network initialization details:
-    config['loadNetInitState'] = True 
+    config['loadNetInitState'] = False 
     config['pathNetInitState'] = config['network'] + '_'+ str(datasetId)
 
     #%% Define data path things here. Do it once and forget it!
@@ -279,7 +279,9 @@ def ho(datasetId = None, network = None, nGPU = None, subTorun=None):
         # Call the network for training
         setRandom(config['randSeed'])
         net = network(**config['modelArguments'])
-        net.load_state_dict(netInitState, strict=False)
+        if config['loadNetInitState']:
+            if config['netInitStateExists']:
+                net.load_state_dict(netInitState, strict=False)
         
         outPathSub = os.path.join(config['outPath'], 'sub'+ str(iSub))
         model = baseModel(net=net, resultsSavePath=outPathSub, batchSize= config['batchSize'], nGPU = nGPU)

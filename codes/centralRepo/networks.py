@@ -256,7 +256,7 @@ class FBCNet(nn.Module):
                 nn.LogSoftmax(dim = 1))
 
     def __init__(self, nChan, nTime, nClass = 2, nBands = 9, m = 32,
-                 temporalLayer = 'LogVarLayer', strideFactor= 4, doWeightNorm = True, *args, **kwargs):
+                 temporalLayer = 'LogVarLayer', strideFactor= 1, doWeightNorm = True, *args, **kwargs):
         super(FBCNet, self).__init__()
 
         self.nBands = nBands
