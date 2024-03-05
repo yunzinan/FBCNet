@@ -80,6 +80,7 @@ class baseModel():
         self,
         trainData,
         valData,
+        finetuneData=None,
         testData=None,
         classes=None,
         lossFn='NLLLoss',
@@ -206,6 +207,23 @@ class baseModel():
             testResults['loss'] = l
             expDetail['results']['test'] = testResults
 
+        
+        if finetuneData is not None:
+            finetuneResults = self._trainOE(finetuneData, testData, lossFn,
+                                            optimFns, lr, stopCondi,
+                                            optimFnArgs, classes=classes,
+                                            sampler=sampler,
+                                            loadBestModel=loadBestModel,
+                                            bestVarToCheck=bestVarToCheck,
+                                            continueAfterEarlystop=False)
+
+        # if test data is present then get the results for the test data.
+        if testData is not None:
+            pred, act, l = self.predict(testData, sampler=sampler, lossFn=lossFn)
+            testResults2 = self.calculateResults(pred, act, classes=classes)
+            testResults2['loss'] = l
+            expDetail['results']['test2'] = testResults2
+
         # Print the final output to the console:
         print("Exp No. : " + str(expNo + 1))
         print('________________________________________________')
@@ -216,6 +234,9 @@ class baseModel():
         if testData is not None:
             print('\n Test Results: ')
             print(expDetail['results']['test'])
+            print('\n Test Results after fine-tuning: ')
+            print(expDetail['results']['test2'])
+
 
         # save the results
         if self.resultsSavePath is not None:

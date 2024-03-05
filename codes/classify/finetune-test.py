@@ -88,6 +88,7 @@ def ho(datasetId = None, network = None, nGPU = None, subTorun=None):
     config['subTorun'] = subTorun
     config['trainDataToUse'] = 1    # How much data to use for training
     config['validationSet'] = 0.2   # how much of the training data will be used a validation set
+    config['finetuneSize'] = 30 # how many trials for finetuning the model
 
     # network initialization details:
     config['loadNetInitState'] = False 
@@ -279,6 +280,13 @@ def ho(datasetId = None, network = None, nGPU = None, subTorun=None):
         valData.createPartialDataset(list( range( 
             math.ceil(len(trainData)*(1-config['validationSet'])) , len(trainData))))
         trainData.createPartialDataset(list(range(0, math.ceil(len(trainData)*(1-config['validationSet'])))))
+
+        finetuneData = copy.deepcopy(testData)
+        finetuneData.createPartialDataset(list(range(0, config['finetuneSize'])))
+        testData.createPartialDataset(list(range(config['finetuneSize'], len(testData))))
+
+        print(f"trianData size: {len(trainData)}, validData size: {len(valData)}")
+        print(f"finetuneData size: {len(finetuneData)}, testData size: {len(testData)}")
         
         # Call the network for training
         setRandom(config['randSeed'])
@@ -289,7 +297,7 @@ def ho(datasetId = None, network = None, nGPU = None, subTorun=None):
         
         outPathSub = os.path.join(config['outPath'], 'sub'+ str(iSub))
         model = baseModel(net=net, resultsSavePath=outPathSub, batchSize= config['batchSize'], nGPU = nGPU)
-        model.train(trainData, valData, testData, **config['modelTrainArguments'])
+        model.train(trainData, valData, finetuneData, testData, **config['modelTrainArguments'])
         
         # extract the important results.
         trainResults.append([d['results']['trainBest'] for d in model.expDetails])
