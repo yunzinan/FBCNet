@@ -144,8 +144,8 @@ def parseLyhFile(sessionId, epochWindow = [0,4], chans = list(range(22))):
         # now we have of a list of len 300, w/ each of shape (15, 1000)
         tmp = np.stack(trial_list) # should give a shape of (300, 15, 1000)
         X_raw = tmp[:, :14, :] # filter the channels, only need the first 14 channels
-        # (300, 14, 1000)
-        y_raw = np.array([i for j in range(n_trial)]) # (300,) value = label
+        # (n_trials, 14, 250)
+        y_raw = np.array([i for j in range(n_trial)]) # (n_trials,) value = label
         # now shuffle the 300 samples 
         shuffle_idx = np.random.permutation(len(X_raw))
         X_raw = X_raw[shuffle_idx, :, :]
@@ -270,10 +270,11 @@ def parseLyhDataset(datasetPath, savePath,
         os.makedirs(savePath)
     print('Processed data be saved in folder : ' + savePath)
             
-    train_data = parseLyhFile(sessionId="v3", 
+    train_data = parseLyhFile(sessionId="v2", 
                         epochWindow=epochWindow, chans=chans)
-    test_data = parseLyhFile(sessionId="v2", 
+    test_data = parseLyhFile(sessionId="v3", 
                         epochWindow=epochWindow, chans=chans)
+    
     
     
     print(train_data['x'].shape, train_data['y'].shape,

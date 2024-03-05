@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 # coding: utf-8
 """
-Train model using the whole dataset and save the net weight.
-@author: Yunji Zhang
+Train the FBCNet on the lyh_dataset
+the model state dict will be saved for further usage
+@author: Ravikiran Mane, yunzinan
 """
+
 import numpy as np
 import torch
 import sys
@@ -23,36 +25,10 @@ import networks
 import transforms
 from saveData import fetchData
 
-import warnings
-warnings.filterwarnings("ignore")
-
-ch_names = ['EEG-Fz', 'EEG-0', 'EEG-1', 'EEG-2', 'EEG-3', 'EEG-4', 'EEG-5', 'EEG-C3', 'EEG-6', 'EEG-Cz', 'EEG-7', 'EEG-C4', 'EEG-8', 'EEG-9', 'EEG-10', 'EEG-11', 'EEG-12', 'EEG-13', 'EEG-14', 'EEG-Pz', 'EEG-15', 'EEG-16', 'EOG-left', 'EOG-central', 'EOG-right']
-
 # reporting settings
 debug = False
 
-def dictToCsv(filePath, dictToWrite):
-    """
-    Write a dictionary to a given csv file
-    """
-    with open(filePath, 'w') as csv_file:
-        writer = csv.writer(csv_file)
-        for key, value in dictToWrite.items():
-            writer.writerow([key, value])
-
-def config(datasetId = None, network = None, nGPU = None, subTorun=None):
-    '''
-    Define all the configurations in this function.
-    -------
-    params: datasetID (type: int): ID of dataset used to run, which is 0 or 1, default: 0.  
-            network (type: str): Name of network used to run, default: "FBCNet".
-            nGPU (type: int): Num of GPU used to run, default: 0, means use CPU.
-            subTorun (type: int): ID of subject used to run, default: 0.
-    -------
-    return: config (type: dict): Config dictionary
-            data (type: torch.Dataset): Dataset
-            net (type: torch.nn): Initialized network model
-    '''
+def ho(datasetId = None, network = None, nGPU = None, subTorun=None):
 
     #%% Set the defaults use these to quickly run the network
     datasetId = datasetId or 0
@@ -62,9 +38,9 @@ def config(datasetId = None, network = None, nGPU = None, subTorun=None):
     selectiveSubs = False
     
     # decide which data to operate on:
-    # datasetId ->  0:BCI-IV-2a data,    1: Korea data
-    datasets = ['bci42a', 'korea']
-
+    # datasetId ->  0:BCI-IV-2a data,    1: Korea data  2: lyh dataset
+    datasets = ['bci42a', 'korea', 'lyh'] 
+    
     #%% Define all the model and training related options here.
     config = {}
 
@@ -76,17 +52,22 @@ def config(datasetId = None, network = None, nGPU = None, subTorun=None):
     
     # Network related details
     config['network'] = network
-    config['batchSize'] = 16
+    config['batchSize'] = 80
     
     if datasetId == 1:
         config['modelArguments'] = {'nChan': 20, 'nTime': 1000, 'dropoutP': 0.5,
                                     'nBands':9, 'm' : 32, 'temporalLayer': 'LogVarLayer',
                                     'nClass': 2, 'doWeightNorm': True}
     elif datasetId == 0:
-        config['modelArguments'] = {'nChan': 8, 'nTime': 1000, 'dropoutP': 0.5,
+        config['modelArguments'] = {'nChan': 22, 'nTime': 1000, 'dropoutP': 0.5,
                                     'nBands':9, 'm' : 32, 'temporalLayer': 'LogVarLayer',
-                                    'nClass': 3, 'doWeightNorm': True}
+                                    'nClass': 4, 'doWeightNorm': True}
     
+    elif datasetId == 2:
+        config['modelArguments'] = {'nChan': 14, 'nTime': 250, 'dropoutP': 0.5,
+                                    'nBands':9, 'm' : 32, 'temporalLayer': 'LogVarLayer',
+                                    'nClass':3, 'doWeightNorm': True}
+
     # Training related details    
     config['modelTrainArguments'] = {'stopCondi':  {'c': {'Or': {'c1': {'MaxEpoch': {'maxEpochs': 1500, 'varName' : 'epoch'}},
                                                        'c2': {'NoDecrease': {'numEpochs' : 200, 'varName': 'valInacc'}} } }},
@@ -95,6 +76,8 @@ def config(datasetId = None, network = None, nGPU = None, subTorun=None):
             
     if datasetId ==0:
         config['modelTrainArguments']['classes'] = [0,1,2,3] # 4 class data
+    if datasetId ==2:
+        config['modelTrainArguments']['classes'] = [0,1,2] # 3 class data
 
     config['transformArguments'] = None
 
@@ -103,12 +86,11 @@ def config(datasetId = None, network = None, nGPU = None, subTorun=None):
     config['kFold'] = 1
     config['data'] = 'raw'
     config['subTorun'] = subTorun
-    config['trainDataToUse'] = 0.8    # How much data to use for training
-    config['validationSet'] = 0.2  # how much of the training data will be used a validation set
-    config['testDataToUse'] = 0.2
+    config['trainDataToUse'] = 1    # How much data to use for training
+    config['validationSet'] = 0.2   # how much of the training data will be used a validation set
 
     # network initialization details:
-    config['loadNetInitState'] = True
+    config['loadNetInitState'] = False 
     config['pathNetInitState'] = config['network'] + '_'+ str(datasetId)
 
     #%% Define data path things here. Do it once and forget it!
@@ -131,19 +113,14 @@ def config(datasetId = None, network = None, nGPU = None, subTorun=None):
     # Output folder:
     # Lets store all the outputs of the given run in folder.
     config['outPath'] = os.path.join(toolboxPath, 'output')
-    config['outPath'] = os.path.join(config['outPath'], datasets[datasetId]) # /FBCNet/output/bci42a
+    config['outPath'] = os.path.join(config['outPath'], datasets[datasetId], 'ses2Test')
 
     # Network initialization:
     config['pathNetInitState'] = os.path.join(masterPath, 'netInitModels', config['pathNetInitState']+'.pth')
     # check if the file exists else raise a flag
-    config['netInitStateExists'] =  False # os.path.isfile(config['pathNetInitState'])
-
-    # Path to save the trained model
-    config['pathModel'] = os.path.join(masterPath, 'netModels')
-    # check if the file exists else raise a flag
-    config['netStateExists'] = os.path.isfile(config['pathModel'])
-
-    #%% Some functions that should be defined hereve mode
+    config['netInitStateExists'] = os.path.isfile(config['pathNetInitState'])
+    
+    #%% Some functions that should be defined here
 
     def setRandom(seed):
         '''
@@ -160,26 +137,54 @@ def config(datasetId = None, network = None, nGPU = None, subTorun=None):
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
 
+    def excelAddData(worksheet, startCell, data, isNpData = False):
+        '''
+            Write the given max 2D data to a given given worksheet starting from the start-cell.
+            List will be treated as a row.
+            List of list will be treated in a matrix format with inner list constituting a row.
+            will return the modified worksheet which needs to be written to a file
+            isNpData flag indicate whether the incoming data in the list is of np data-type
+        '''
+        #  Check the input type.
+        if type(data) is not list:
+            data = [[data]]
+        elif type(data[0]) is not list:
+            data = [data]
+        else:
+            data = data
+
+        # write the data. starting from the given start cell.
+        rowStart = startCell[0]
+        colStart = startCell[1]
+
+        for i, row in enumerate(data):
+            for j, col in enumerate(row):
+                if isNpData:
+                    worksheet.write(rowStart+i, colStart+j, col.item())
+                else:
+                    worksheet.write(rowStart+i, colStart+j, col)
+
+        return worksheet
+
+    def dictToCsv(filePath, dictToWrite):
+    	"""
+    	Write a dictionary to a given csv file
+    	"""
+    	with open(filePath, 'w') as csv_file:
+    		writer = csv.writer(csv_file)
+    		for key, value in dictToWrite.items():
+    			writer.writerow([key, value])
+
     def count_parameters(model):
         return sum(p.numel() for p in model.parameters() if p.requires_grad)
-    
-                   
     #%% create output folder
     # based on current date and time -> always unique!
     randomFolder = str(time.strftime("%Y-%m-%d--%H-%M", time.localtime()))+ '-'+str(random.randint(1,1000))
     config['outPath'] = os.path.join(config['outPath'], randomFolder,'')
-    config['resultsOutPath'] = os.path.join(config['outPath'], "Results")
-    config['modelsOutPath'] = os.path.join(config['outPath'], config['network'])
     # create the path
     if not os.path.exists(config['outPath']):
         os.makedirs(config['outPath'])
     print('Outputs will be saved in folder : ' + config['outPath'])
-    if not os.path.exists(config['resultsOutPath']):
-        os.makedirs(config['resultsOutPath'])
-    print('Results will be saved in folder : ' + config['resultsOutPath'])
-    if not os.path.exists(config['modelsOutPath']):
-        os.makedirs(config['modelsOutPath'])
-    print('Models will be saved in folder : ' + config['modelsOutPath'])
 
     # Write the config dictionary
     dictToCsv(os.path.join(config['outPath'],'config.csv'), config)
@@ -192,16 +197,12 @@ def config(datasetId = None, network = None, nGPU = None, subTorun=None):
             transform = transforms.__dict__[list(config['transformArguments'].keys())[0]](**config['transformArguments'][list(config['transformArguments'].keys())[0]])
     else:
         transform = None
-    
-    # print(transform)
 
     #%% check and Load the data
     print('Data loading in progress')
+    # XXX: Fetch the dataset
     fetchData(os.path.dirname(config['inDataPath']), datasetId) # Make sure that all the required data is present!
-    selected_chans = [1, 2, 4, 5, 6, 7, 11, 12]  # 8通道
-    # selected_chans = [0, 1, 2, 4, 5, 6, 7, 11, 12, 21]  # 10通道
-    # selected_chans = [7, 9, 11] # 3通道
-    data = eegDataset(dataPath = config['inDataPath'], dataLabelsPath= config['inLabelPath'], preloadData = config['preloadData'], transform= transform, selected_chans=selected_chans)
+    data = eegDataset(dataPath = config['inDataPath'], dataLabelsPath= config['inLabelPath'], preloadData = config['preloadData'], transform= transform)
     print('Data loading finished')
 
     #%% Check and load the model
@@ -225,10 +226,11 @@ def config(datasetId = None, network = None, nGPU = None, subTorun=None):
             netInitState = net.to('cpu').state_dict()
             torch.save(netInitState, config['pathNetInitState'])
 
-    #%% Find all the subjects to run 
+   #%% Find all the subjects to run 
     subs = sorted(set([d[3] for d in data.labels]))
     nSub = len(subs)
-
+    print(subs, 
+         "\n" + "n_subjects: ", nSub)
     ## Set sub2run
     if selectiveSubs:
         config['subTorun'] = config['subTorun']
@@ -239,33 +241,17 @@ def config(datasetId = None, network = None, nGPU = None, subTorun=None):
             config['subTorun'] = list(range(nSub))
 
 
-    # Call the network for training
-    setRandom(config['randSeed'])
-    net = network(**config['modelArguments'])
-    net.load_state_dict(netInitState, strict=False)
+    #%% Let the training begin
+    trainResults = []
+    valResults = []
+    testResults = []
 
-    print("ALL CONFIG COMPLETED\n " + "*" * 30)
-    return config, data, net
-
-def spiltDataSet(trainDataToUse, testDataToUse, validationSet, data):
-    '''
-    去掉标签为tongue的数据
-    把T和E数据集合并,并取80%用于训练, 20%用于测试
-    各subject分层采样
-    将测试集存为.npy文件
-    Return:
-    trainData: torch.DataSet类型
-    valData: torch.DataSet类型
-    '''
-
-    subs = sorted(set([d[3] for d in data.labels]))
-
-    train_data = []
-    val_data = []
-    test_data = []
-
-    # 每个个体分层采样
     for iSub, sub in enumerate(subs):
+        
+        if iSub not in config['subTorun']:
+            continue
+        
+        start = time.time()
         
         # extract subject data
         subIdx = [i for i, x in enumerate(data.labels) if x[3] in sub]
@@ -273,100 +259,106 @@ def spiltDataSet(trainDataToUse, testDataToUse, validationSet, data):
         subData.createPartialDataset(subIdx, loadNonLoadedData = True)
         
         trainData = copy.deepcopy(subData)
-        del subData
-        testData = copy.deepcopy(trainData)
+        testData = copy.deepcopy(subData)
         
-        # 训练集0.8，测试集0.2
-        # print(len(trainData))
-        # print(math.ceil(len(trainData)*config['trainDataToUse']))
+        # Isolate the train -> session 0 and test data-> session 1
+        if len(subData.labels[0])>4:
+            idxTrain = [i for i, x in enumerate(subData.labels) if x[4] == '0' ]
+            idxTest = [i for i, x in enumerate(subData.labels) if x[4] == '1' ]
+        else:
+            raise ValueError("The data can not be divided based on the sessions")
+        
+        testData.createPartialDataset(idxTest)
+        trainData.createPartialDataset(idxTrain)
+        
+        # extract the desired amount of train data: 
         trainData.createPartialDataset(list(range(0, math.ceil(len(trainData)*config['trainDataToUse']))))
-        testData.createPartialDataset(list( range( 
-            math.ceil(len(testData)*(1-config['testDataToUse'])) , len(testData))))
 
-        # 训练集再分，训练集0.8，验证集0.2
+        # isolate the train and validation set
         valData = copy.deepcopy(trainData)
         valData.createPartialDataset(list( range( 
             math.ceil(len(trainData)*(1-config['validationSet'])) , len(trainData))))
         trainData.createPartialDataset(list(range(0, math.ceil(len(trainData)*(1-config['validationSet'])))))
         
-        train_data.append(trainData)
-        val_data.append(valData)
-        test_data.append(testData)
-
-    # 每个个体分层采样的数据合在一起
-    for i in range(1, len(train_data)):
-        train_data[0].combineDataset(train_data[i])
-        val_data[0].combineDataset(val_data[i])
-        test_data[0].combineDataset(test_data[i])
-
-    # 得到最后的训练集、验证集和测试集
-    trainData = copy.deepcopy(train_data[0])
-    valData = copy.deepcopy(val_data[0])
-    testData = copy.deepcopy(test_data[0])
-    del train_data, val_data, test_data
-
-    # 测试集要加上tongue标签的数据
-    finalTestData = data.getTongueData()
-    for sample in testData:
-        finalTestData.append(sample)
-    
-    # print(len(trainData), len(valData), len(testData), len(finalTestData))
-    # print(finalTestData[0])
-    # print(finalTestData[-1])
-    
-    # # 将测试集存成.npy文件
-    # if not os.path.exists('TestData.npy'):
-    #     # 将 PyTorch 张量转换为 NumPy 数组
-    #     numpy_data_list = [{'data': item['data'].numpy(), 'label': item['label']} for item in finalTestData]
-    #     # 保存 NumPy 数组
-    #     np.save('TestData.npy', numpy_data_list)
-
-    del finalTestData
-
-    loaded_data_list = np.load('TestData.npy', allow_pickle=True)
-
-    return trainData, valData
-
-def train(config, data, initNet):
-    '''
-    Train model using the whole dataset and save the net weight.
-    ------
-    params: config (type: dict): Config dictionary
-            data (type: torch.Dataset): Dataset
-            initNet (type: torch.nn): Initialized network model
-    '''
-
-
-    #%% Let the training begin
-    trainResults = []
-    valResults = []
-    
-    start = time.time()
-    
-    trainData, valData = spiltDataSet(config['trainDataToUse'], config['testDataToUse'], \
-                                                config['validationSet'], data)
-    
-    # D:\codes\BCI-VR\FBCNet\codes\netModels\2023-11-20--20-41-312\sub0\FBCNet_0
-    model = baseModel(net=initNet, resultsSavePath=config['resultsOutPath'], modelSavePath=config['modelsOutPath'], batchSize= config['batchSize'], nGPU = nGPU)
-    model.train(trainData, valData, **config['modelTrainArguments'])
-    
-    # extract the important results.
-    trainResults.append([d['results']['trainBest'] for d in model.expDetails])
-    valResults.append([d['results']['valBest'] for d in model.expDetails])
-    
-    # save the results
-    results = {'train:' : trainResults[-1], 'val: ': valResults[-1]} 
-    dictToCsv(os.path.join(config['resultsOutPath'],'results.csv'), results)
-    
-    # Time taken
-    print("Time taken = "+ str(time.time()-start))
-
+        # Call the network for training
+        setRandom(config['randSeed'])
+        net = network(**config['modelArguments'])
+        # XXX: seems a bug
+        if config['loadNetInitState']:
+            net.load_state_dict(netInitState, strict=False)
         
+        outPathSub = os.path.join(config['outPath'], 'sub'+ str(iSub))
+        model = baseModel(net=net, resultsSavePath=outPathSub, batchSize= config['batchSize'], nGPU = nGPU)
+        model.train(trainData, valData, testData, **config['modelTrainArguments'])
+        
+        # extract the important results.
+        trainResults.append([d['results']['trainBest'] for d in model.expDetails])
+        valResults.append([d['results']['valBest'] for d in model.expDetails])
+        testResults.append([d['results']['test'] for d in model.expDetails])
+        
+        # save the results
+        results = {'train:' : trainResults[-1], 'val: ': valResults[-1], 'test': testResults[-1]} 
+        dictToCsv(os.path.join(outPathSub,'results.csv'), results)
+        
+        # Time taken
+        print("Time taken = "+ str(time.time()-start))
  
+    #%% Extract and write the results to excel file.
 
+    # lets group the results for all the subjects using experiment.
+    # the train, test and val accuracy and cm will be written
+
+    trainAcc = [[r['acc'] for r in result] for result in trainResults]
+    trainAcc = list(map(list, zip(*trainAcc)))
+    valAcc = [[r['acc'] for r in result] for result in valResults]
+    valAcc = list(map(list, zip(*valAcc)))
+    testAcc = [[r['acc'] for r in result] for result in testResults]
+    testAcc = list(map(list, zip(*testAcc)))
+
+    print("Results sequence is train, val , test")
+    print(trainAcc)
+    print(valAcc)
+    print(testAcc)
+
+    # append the confusion matrix
+    trainCm = [[r['cm'] for r in result] for result in trainResults]
+    trainCm = list(map(list, zip(*trainCm)))
+    trainCm = [np.concatenate(tuple([cm for cm in cms]), axis = 1) for cms in trainCm]
+
+    valCm = [[r['cm'] for r in result] for result in valResults]
+    valCm = list(map(list, zip(*valCm)))
+    valCm = [np.concatenate(tuple([cm for cm in cms]), axis = 1) for cms in valCm]
+
+    testCm = [[r['cm'] for r in result] for result in testResults]
+    testCm = list(map(list, zip(*testCm)))
+    testCm = [np.concatenate(tuple([cm for cm in cms]), axis = 1) for cms in testCm]
+
+    print(trainCm)
+    print(valCm)
+    print(testCm)
+    #%% Excel writing
+    book = xlwt.Workbook(encoding="utf-8")
+    for i, res in enumerate(trainAcc):
+        sheet1 = book.add_sheet('exp-'+str(i+1), cell_overwrite_ok=True)
+        sheet1 = excelAddData(sheet1, [0,0], ['SubId', 'trainAcc', 'valAcc', 'testAcc'])
+        sheet1 = excelAddData(sheet1, [1,0], [[sub] for sub in subs])
+        sheet1 = excelAddData(sheet1, [1,1], [[acc] for acc in trainAcc[i]], isNpData= True)
+        sheet1 = excelAddData(sheet1, [1,2], [[acc] for acc in valAcc[i]], isNpData= True)
+        sheet1 = excelAddData(sheet1, [1,3], [[acc] for acc in testAcc[i]], isNpData= True)
+
+        # write the cm
+        for isub, sub in enumerate(subs):
+            sheet1 = excelAddData(sheet1, [len(trainAcc[0])+5,0+isub*len( config['modelTrainArguments']['classes'])], sub)
+        sheet1 = excelAddData(sheet1, [len(trainAcc[0])+6,0], ['train CM:'])
+        sheet1 = excelAddData(sheet1, [len(trainAcc[0])+7,0], trainCm[i].tolist(), isNpData= False)
+        sheet1 = excelAddData(sheet1, [len(trainAcc[0])+11,0], ['val CM:'])
+        sheet1 = excelAddData(sheet1, [len(trainAcc[0])+12,0], valCm[i].tolist(), isNpData= False)
+        sheet1 = excelAddData(sheet1, [len(trainAcc[0])+17,0], ['test CM:'])
+        sheet1 = excelAddData(sheet1, [len(trainAcc[0])+18,0], testCm[i].tolist(), isNpData= False)
+
+    book.save(os.path.join(config['outPath'], 'results.xls'))
 
 if __name__ == '__main__':
-
     arguments = sys.argv[1:]
     count = len(arguments)
 
@@ -383,12 +375,13 @@ if __name__ == '__main__':
     if count >2:
         nGPU = int(arguments[2])
     else:
-        nGPU = 0
+        nGPU = None
 
     if count >3:
         subTorun = [int(s) for s in str(arguments[3]).split(',')]
 
     else:
         subTorun = None
-    config, data, net = config(datasetId, network, nGPU, subTorun)
-    train(config, data, net)
+    
+    ho(datasetId, network, nGPU, subTorun)
+
