@@ -71,6 +71,14 @@ if __name__ == "__main__":
 
     trainData, finetuneData, testData = get_data()
 
+
+    # predicted = []
+    # actual = []
+    # loss = 0
+    # batch_size = 80 
+    # totalCount = 0
+    # # set the network in the eval mode
+    # fbcnet.net.eval()
     print("------train set w/o finetune----------")
     dataLoader = DataLoader(trainData, batch_size=1, shuffle=False)
 
