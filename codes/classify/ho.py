@@ -64,7 +64,7 @@ def ho(datasetId = None, network = None, nGPU = None, subTorun=None):
     elif datasetId == 2:
         config['modelArguments'] = {'nChan': 14, 'nTime': 250, 'dropoutP': 0.5,
                                     'nBands':9, 'm' : 32, 'temporalLayer': 'LogVarLayer',
-                                    'nClass': 4, 'doWeightNorm': True}
+                                    'nClass': 3, 'doWeightNorm': True}
 
     # Training related details    
     config['modelTrainArguments'] = {'stopCondi':  {'c': {'Or': {'c1': {'MaxEpoch': {'maxEpochs': 1500, 'varName' : 'epoch'}},
@@ -72,8 +72,11 @@ def ho(datasetId = None, network = None, nGPU = None, subTorun=None):
           'classes': [0,1], 'sampler' : 'RandomSampler', 'loadBestModel': True,
           'bestVarToCheck': 'valInacc', 'continueAfterEarlystop':True,'lr': 1e-3}
             
-    if datasetId ==0 or datasetId == 2:
+    if datasetId ==0:
         config['modelTrainArguments']['classes'] = [0,1,2,3] # 4 class data
+    
+    if datasetId ==2:
+        config['modelTrainArguments']['classes'] = [0,1,2] # 3 class data
 
     config['transformArguments'] = None
 
@@ -285,15 +288,16 @@ def ho(datasetId = None, network = None, nGPU = None, subTorun=None):
         
         outPathSub = os.path.join(config['outPath'], 'sub'+ str(iSub))
         model = baseModel(net=net, resultsSavePath=outPathSub, batchSize= config['batchSize'], nGPU = nGPU)
-        model.train(trainData, valData, testData, **config['modelTrainArguments'])
+        model.train(trainData, valData, None, **config['modelTrainArguments'])
         
         # extract the important results.
         trainResults.append([d['results']['trainBest'] for d in model.expDetails])
         valResults.append([d['results']['valBest'] for d in model.expDetails])
-        testResults.append([d['results']['test'] for d in model.expDetails])
+        if testData is not None:
+            testResults.append([d['results']['test'] for d in model.expDetails])
         
         # save the results
-        results = {'train:' : trainResults[-1], 'val: ': valResults[-1], 'test': testResults[-1]} 
+        results = {'train:' : trainResults[-1], 'val: ': valResults[-1], 'test': testResults[-1] if testData is not None else None} 
         dictToCsv(os.path.join(outPathSub,'results.csv'), results)
         
         # Time taken

@@ -119,18 +119,18 @@ def parseLyhFile(sessionId, epochWindow = [0,4], chans = list(range(22))):
     leg_v3 = np.load(os.path.join(dir_path, leg_v3_fp))
     nothing_v2 = np.load(os.path.join(dir_path, nothing_v2_fp))
     nothing_v3 = np.load(os.path.join(dir_path, nothing_v3_fp))
-    eeg_raw_v2 = [left_v2, right_v2, leg_v2, nothing_v2]
-    eeg_raw_v3 = [left_v3, right_v3, leg_v3, nothing_v3]
+    eeg_raw_v2 = [left_v2, right_v2, leg_v2]
+    eeg_raw_v3 = [left_v3, right_v3, leg_v3]
 
     fs = 250
     X_train_tot = []
     X_test_tot = []
     y_train_tot = []
     y_test_tot = []
-    train_ratio = 0.8 # so that 80% trainset, the rest testset
+    train_ratio = 1.0 # so that 100% trainset, the rest testset
     eeg_raw = eeg_raw_v2 if sessionId == "v2" else eeg_raw_v3
 
-    for i in range(4):
+    for i in range(3):
         # XXX: fixed the bug that you cannot simply reshape the files
         # tmp = eeg_raw[i].reshape(15, 300, -1) # (15, 30_0000) => (15, 300, 1000)
         # goal: (15, 30_0000) => (15, 300, 1000)
@@ -267,19 +267,19 @@ def parseLyhDataset(datasetPath, savePath,
             
     train_data, test_data = parseLyhFile(sessionId="v2", 
                         epochWindow = epochWindow, chans = chans)
-    train_data_v3, test_data_v3 = parseLyhFile(sessionId="v3", 
-                        epochWindow= epochWindow, chans=chans)
+    # train_data_v3, test_data_v3 = parseLyhFile(sessionId="v3", 
+    #                     epochWindow= epochWindow, chans=chans)
     
     print(train_data['x'].shape, train_data['y'].shape,
           test_data['x'].shape,  test_data['y'].shape)
 
-    print(train_data_v3['x'].shape, train_data_v3['y'].shape,
-          test_data_v3['x'].shape,  test_data_v3['y'].shape)
+    # print(train_data_v3['x'].shape, train_data_v3['y'].shape,
+    #       test_data_v3['x'].shape,  test_data_v3['y'].shape)
 
     savemat(os.path.join(savePath, "s"+str(1).zfill(3)+'.mat'), train_data)
-    savemat(os.path.join(savePath, "se"+str(1).zfill(3)+'.mat'), test_data)
-    savemat(os.path.join(savePath, "s"+str(2).zfill(3)+'.mat'), train_data_v3)
-    savemat(os.path.join(savePath, "se"+str(2).zfill(3)+'.mat'), test_data_v3)
+    # savemat(os.path.join(savePath, "se"+str(1).zfill(3)+'.mat'), test_data)
+    # savemat(os.path.join(savePath, "s"+str(2).zfill(3)+'.mat'), train_data_v3)
+    # savemat(os.path.join(savePath, "se"+str(2).zfill(3)+'.mat'), test_data_v3)
 
 def fetchAndParseKoreaFile(dataPath, url = None, epochWindow = [0,4],
                            chans = [7,32, 8, 9, 33, 10, 34, 12, 35, 13, 36, 14, 37, 17, 38, 18, 39, 19, 40, 20],
