@@ -1,6 +1,10 @@
 from scipy.io import loadmat, savemat
 import numpy as np
 import os
+import sys
+masterPath = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(1, os.path.join(masterPath, 'centralRepo')) # To load all the relevant files
+import transforms
 
 def load_lyh_data(sessionId):
     '''
@@ -133,8 +137,19 @@ def transform_data(X, y):
     config['transformArguments'] = {'filterBank':{'filtBank':[[4,8],[8,12],[12,16],[16,20],[20,24],[24,28],[28,32],[32,36],[36,40]],'fs':250, 'filtType':'filter'}}
     transform = transforms.__dict__[list(config['transformArguments'].keys())[0]](**config['transformArguments'][list(config['transformArguments'].keys())[0]])
 
-    # now the 
+    # transpose 
 
+    X = X.transpose((2, 0, 1))
+    for idx in range(len(X)):
+        x = X[idx] 
+        print(x.shape)
+        dct = {
+            'data': x,
+            'idx': 114514,
+            'label': 123456,
+        }
+        dct = transform(dct)
+        print(dct['data'].shape)
     
 
 
@@ -143,3 +158,4 @@ if __name__ == "__main__":
     X_test = data['x']
     y_test = data['y']
     print(X_test.shape, y_test.shape)
+    transform_data(X_test, y_test)

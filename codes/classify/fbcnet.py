@@ -13,6 +13,12 @@ import torch.nn as nn
 import torch.optim as optim
 from tqdm import tqdm
 
+import os
+import sys
+masterPath = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(1, os.path.join(masterPath, 'centralRepo')) # To load all the relevant files
+import transforms
+
 config = {}
 
 config['randSeed'] = 20190821
@@ -38,6 +44,38 @@ class FBCNet:
         self.device = torch.device("cuda")
         self.setRandom(config['randSeed']) 
         self.loadModel()
+
+    def transform(self, X):
+        """
+        Transform X using filter bank.
+        Attributes
+        ----------
+        - X: np.ndarray
+            should be in the form of (n_trials, n_chans, n_times)
+        
+        Return
+        ------
+        - X: torch.Tensor
+            should be in the form of (n_trials, n_chans, n_times, 9), where 9 denotes the filter banks.
+        """
+        config = {}
+        config['transformArguments'] = {'filterBank':{'filtBank':[[4,8],[8,12],[12,16],[16,20],[20,24],[24,28],[28,32],[32,36],[36,40]],'fs':250, 'filtType':'filter'}}
+        transform = transforms.__dict__[list(config['transformArguments'].keys())[0]](**config['transformArguments'][list(config['transformArguments'].keys())[0]])
+        X_list = []
+        # print(X)/
+        for idx in range(len(X)):
+            x = X[idx]
+            dct = {
+                'data': x,
+                'label': 114514, # whatever 
+                'idx': 1919810, # whatsoever
+            }
+            dct = transform(dct)
+            X_list.append(dct['data'])
+    
+        X_transformed = torch.stack(X_list)
+        return X_transformed
+
 
     def setRandom(self, seed):
         '''
@@ -75,9 +113,9 @@ class FBCNet:
 
         Attributes
         ----------
-        - X_train: np.ndarray
-            should be in the form of (n_trials, n_chans, n_times)
-        - y_train: np.ndarray
+        - X_train: torch.Tensor
+            should be in the form of (n_trials, n_chans, n_times, 9)
+        - y_train: torch.Tensor 
             should be in the form of (n_trials,)
         - n_epochs: int
             the number of total train epochs
@@ -91,7 +129,7 @@ class FBCNet:
         """
 
         # create the Dataloader
-        X_tensor = torch.from_numpy(X_train).unsqueeze(1)
+        X_tensor = X_train.unsqueeze(1)
         y_tensor = torch.from_numpy(y_train)
 
         dataset = TensorDataset(X_tensor, y_tensor)
@@ -134,8 +172,12 @@ class FBCNet:
         ------
         Nothing. but the model state dict will be updated.
         """ 
+        # transform the data
+        X, y = data  
+        X = self.transform(X)
         print("the model will be finetuned.") 
-        self.train(data[0], data[1], n_epochs=1500, batch_size=30)
+        print(X.shape, y.shape)
+        self.train(X, y, n_epochs=1500, batch_size=30)
 
     def inference(self, data):
         """
@@ -145,18 +187,20 @@ class FBCNet:
         ----------
         - data: numpy.ndarray
             the unlabeled data for inference. should be formatted
-            as (1, n_trials, n_times). In particular, (1, 14, 250)
+            as (1, n_chans, n_times). In particular, (1, 14, 250)
 
         Return:
         ------
         - label: int 
             the predicted label for the input data
         """
+        # tranform the input
+        data = self.transform(data) # should return a Tensor of (1, n_chans, n_times, 9) 
         # print("now the data will be inferenced")
         self.net.eval()
-        d = torch.from_numpy(data).unsqueeze(1)
+        d = data.unsqueeze(1)
         with torch.no_grad():
-            print(d.shape)
+            # print(d.shape)
             preds = self.net(d.to(self.device))
 
             _, preds = torch.max(preds, 1)
