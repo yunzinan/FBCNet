@@ -8,6 +8,10 @@ from ho import networks
 from ho import baseModel
 import numpy as np
 import torch
+from torch.utils.data import DataLoader, TensorDataset
+import torch.nn as nn
+import torch.optim as optim
+from tqdm import tqdm
 
 config = {}
 
@@ -65,23 +69,73 @@ class FBCNet:
         print("pre-trained model loaded.")
         self.model = baseModel(net=self.net, resultsSavePath=None, batchSize=config['batchSize'], setRng=False)
 
+    def train(self, X_train, y_train, n_epochs, batch_size, lr=0.001, shuffle=True):
+        """
+        train the models for n_epochs
+
+        Attributes
+        ----------
+        - X_train: np.ndarray
+            should be in the form of (n_trials, n_chans, n_times)
+        - y_train: np.ndarray
+            should be in the form of (n_trials,)
+        - n_epochs: int
+            the number of total train epochs
+        - batch_size: int
+        - lr: float
+        - shuffle: Boolean
+            whether the dataloader will be shuffled or not, defaults to True
+        Return
+        ------
+        Nothing, but the model state dict will be updated.
+        """
+
+        # create the Dataloader
+        X_tensor = torch.from_numpy(X_train).unsqueeze(1)
+        y_tensor = torch.from_numpy(y_train)
+
+        dataset = TensorDataset(X_tensor, y_tensor)
+        train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+
+        criterion = nn.NLLLoss()
+        optimizer = optim.Adam(self.net.parameters(), lr=lr)
+
+        for epoch in range(n_epochs):
+            self.net.train()
+
+            # for inputs, labels in tqdm(train_loader):
+            for inputs, labels in train_loader:
+                inputs = inputs.to(self.device)
+                labels = labels.to(self.device)
+
+                optimizer.zero_grad()
+
+                outputs = self.net(inputs)
+
+                loss = criterion(outputs, labels)
+
+                loss.backward()
+                optimizer.step()
+
+
+
     def finetune(self, data):
         """
         Finetune the model on the given data.
 
-        Attributes:
+        Attributes
         ----------
         - data: a tuple of two numpy.ndarrays: X and y
             the finetune dataset. should be formatted as
             ((n_trials, n_chans, n_times), (n_trials,)).
             In particular, ((30, 14, 250), (30,))
 
-        Return:
+        Return
         ------
         Nothing. but the model state dict will be updated.
         """ 
         print("the model will be finetuned.") 
-        # self.model.train()
+        self.train(data[0], data[1], n_epochs=1500, batch_size=30)
 
     def inference(self, data):
         """
@@ -99,6 +153,7 @@ class FBCNet:
             the predicted label for the input data
         """
         # print("now the data will be inferenced")
+        self.net.eval()
         d = torch.from_numpy(data).unsqueeze(1)
         with torch.no_grad():
             preds = self.net(d.to(self.device))

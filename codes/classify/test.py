@@ -78,7 +78,6 @@ if __name__ == "__main__":
     # batch_size = 80 
     # totalCount = 0
     # # set the network in the eval mode
-    # fbcnet.net.eval()
     print("------train set w/o finetune----------")
     dataLoader = DataLoader(trainData, batch_size=1, shuffle=False)
 
@@ -117,7 +116,35 @@ if __name__ == "__main__":
 
     print(f"tot: {tot_cnt} correct: {acc_cnt} acc: {acc_cnt / tot_cnt}")
     
-    # fbcnet.finetune()
+    # finetuning the model
+    dataLoader = DataLoader(finetuneData, batch_size=30, shuffle=False)
+
+    for d in dataLoader:
+        data = d['data'].numpy()
+        label = d['label'].numpy()
+
+        # print(data.shape, label.shape)    
+        fbcnet.finetune((data, label))
+
+
+    print("------test set after finetune----------")
+    dataLoader = DataLoader(testData, batch_size=1, shuffle=False)
+
+    ans_list = []
+    tot_cnt = 0
+    acc_cnt = 0
+
+    for d in dataLoader:
+        data = d['data'].numpy()
+        label = d['label'].numpy()
+        # print(data.shape)
+        l = fbcnet.inference(data) 
+        tot_cnt += 1
+        if l == label:
+            acc_cnt += 1
+        ans_list.append(l[0])
+
+    print(f"tot: {tot_cnt} correct: {acc_cnt} acc: {acc_cnt / tot_cnt}")
 
     # fbcnet.inference()
     
