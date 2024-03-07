@@ -103,7 +103,7 @@ class FBCNet:
         self.net = self.network(**config['modelArguments'])
         print('Trainable Parameters in the network are: ' + str(self.count_parameters()))
         loaded_state_dict = torch.load('models/model_state_dict.pth')
-        self.net.load_state_dict(loaded_state_dict)
+        # self.net.load_state_dict(loaded_state_dict)
         print("pre-trained model loaded.")
         self.model = baseModel(net=self.net, resultsSavePath=None, batchSize=config['batchSize'], setRng=False)
 
@@ -177,7 +177,7 @@ class FBCNet:
         X = self.transform(X)
         print("the model will be finetuned.") 
         print(X.shape, y.shape)
-        self.train(X, y, n_epochs=1500, batch_size=30)
+        self.train(X, y, n_epochs=3000, lr=0.001, batch_size=30)
 
     def inference(self, data):
         """

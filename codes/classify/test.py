@@ -198,45 +198,83 @@ if __name__ == "__main__":
     # batch_size = 80 
     # totalCount = 0
     # # set the network in the eval mode
-    print("------train set w/o finetune----------")
+    # print("------train set w/o finetune----------")
+    # ans_list = []
+    # tot_cnt = 0
+    # acc_cnt = 0
+
+    # d = train_data
+    # batch_size = 30
+    # tot_batches = d['x'].shape[0] // batch_size
+
+
+    # for batch_idx in range(tot_batches):
+    #     start_idx = batch_idx * batch_size
+    #     end_idx = (batch_idx + 1) * batch_size 
+    #     data = d['x'][start_idx:end_idx, :, :]
+    #     label = d['y'][start_idx:end_idx]
+    #     # print(data.shape)
+    #     # print(data.shape)
+    #     label_list = fbcnet.inference(data) 
+    #     # print(label_list)
+    #     tot_cnt += label_list.shape[0]
+    #     acc_cnt += (label_list == label).sum().item()
+
+
+    # print(f"tot: {tot_cnt} correct: {acc_cnt} acc: {acc_cnt / tot_cnt}")
+
+    # print("------test set w/o finetune----------")
+    # ans_list = []
+    # tot_cnt = 0
+    # acc_cnt = 0
+
+    # d = test_data
+    # batch_size = 30
+    # tot_batches = d['x'].shape[0] // batch_size
+
+
+    # for batch_idx in range(tot_batches):
+    #     start_idx = batch_idx * batch_size
+    #     end_idx = (batch_idx + 1) * batch_size 
+    #     data = d['x'][start_idx:end_idx, :, :]
+    #     label = d['y'][start_idx:end_idx]
+    #     # print(data.shape)
+    #     # print(data.shape)
+    #     label_list = fbcnet.inference(data) 
+    #     # print(label_list)
+    #     tot_cnt += label_list.shape[0]
+    #     acc_cnt += (label_list == label).sum().item()
+
+
+    # print(f"tot: {tot_cnt} correct: {acc_cnt} acc: {acc_cnt / tot_cnt}")
+    
+
+    fbcnet.finetune((finetune_data['x'], finetune_data['y']))
+
+    print("------train set after finetune----------")
     ans_list = []
     tot_cnt = 0
     acc_cnt = 0
 
     d = train_data
-    for idx in range(d['x'].shape[0]):
-        data = d['x'][idx][np.newaxis, :, :]
-        label = d['y'][idx]
+    batch_size = 30
+    tot_batches = d['x'].shape[0] // batch_size
+
+
+    for batch_idx in range(tot_batches):
+        start_idx = batch_idx * batch_size
+        end_idx = (batch_idx + 1) * batch_size 
+        data = d['x'][start_idx:end_idx, :, :]
+        label = d['y'][start_idx:end_idx]
         # print(data.shape)
         # print(data.shape)
-        l = fbcnet.inference(data) 
-        tot_cnt += 1
-        if l == label:
-            acc_cnt += 1
-        ans_list.append(l[0])
+        label_list = fbcnet.inference(data) 
+        # print(label_list)
+        tot_cnt += label_list.shape[0]
+        acc_cnt += (label_list == label).sum().item()
+
 
     print(f"tot: {tot_cnt} correct: {acc_cnt} acc: {acc_cnt / tot_cnt}")
-
-    print("------test set w/o finetune----------")
-    ans_list = []
-    tot_cnt = 0
-    acc_cnt = 0
-
-    d = test_data 
-    for idx in range(d['x'].shape[0]):
-        data = d['x'][idx][np.newaxis, :, :]
-        label = d['y'][idx]
-        # print(data.shape)
-        l = fbcnet.inference(data) 
-        tot_cnt += 1
-        if l == label:
-            acc_cnt += 1
-        ans_list.append(l[0])
-
-    print(f"tot: {tot_cnt} correct: {acc_cnt} acc: {acc_cnt / tot_cnt}")
-    
-
-    fbcnet.finetune((finetune_data['x'], finetune_data['y']))
 
 
     print("------test set after finetune----------")
@@ -244,16 +282,23 @@ if __name__ == "__main__":
     tot_cnt = 0
     acc_cnt = 0
 
-    d = test_data 
-    for idx in range(d['x'].shape[0]):
-        data = d['x'][idx][np.newaxis, :, :]
-        label = d['y'][idx]
+    d = test_data
+    batch_size = 30
+    tot_batches = d['x'].shape[0] // batch_size
+
+
+    for batch_idx in range(tot_batches):
+        start_idx = batch_idx * batch_size
+        end_idx = (batch_idx + 1) * batch_size 
+        data = d['x'][start_idx:end_idx, :, :]
+        label = d['y'][start_idx:end_idx]
         # print(data.shape)
-        l = fbcnet.inference(data) 
-        tot_cnt += 1
-        if l == label:
-            acc_cnt += 1
-        ans_list.append(l[0])
+        # print(data.shape)
+        label_list = fbcnet.inference(data) 
+        # print(label_list)
+        tot_cnt += label_list.shape[0]
+        acc_cnt += (label_list == label).sum().item()
+
 
     print(f"tot: {tot_cnt} correct: {acc_cnt} acc: {acc_cnt / tot_cnt}")
 
