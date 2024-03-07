@@ -156,6 +156,7 @@ class FBCNet:
         self.net.eval()
         d = torch.from_numpy(data).unsqueeze(1)
         with torch.no_grad():
+            print(d.shape)
             preds = self.net(d.to(self.device))
 
             _, preds = torch.max(preds, 1)

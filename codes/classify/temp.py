@@ -114,10 +114,27 @@ def load_lyh_data(sessionId):
     return data
 
 
-def transform_data():
+def transform_data(X, y):
+    """
+    Attributes
+    ----------
+    - X: np.ndarray
+        should be in the form of (n_chans, n_times, n_trials) 
+    - y: np.ndarray
+        should be in the form of (n_trials,)
+
+    Return
+    ------
+    - X: np.array
+        should be in the form of (n_trials, n_chans, n_times, )
+    """
+    # define transform 
     config = {}
     config['transformArguments'] = {'filterBank':{'filtBank':[[4,8],[8,12],[12,16],[16,20],[20,24],[24,28],[28,32],[32,36],[36,40]],'fs':250, 'filtType':'filter'}}
     transform = transforms.__dict__[list(config['transformArguments'].keys())[0]](**config['transformArguments'][list(config['transformArguments'].keys())[0]])
+
+    # now the 
+
     
 
 
