@@ -217,6 +217,10 @@ class baseModel():
             print('\n Test Results: ')
             print(expDetail['results']['test'])
 
+        # save the model
+        torch.save(self.net.state_dict(), "bci_model_state_dcit.pth")
+        print("=============model state dict saved==================")
+
         # save the results
         if self.resultsSavePath is not None:
 

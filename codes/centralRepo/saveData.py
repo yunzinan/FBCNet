@@ -221,8 +221,10 @@ def parseBci42aDataset(datasetPath, savePath,
     The dataset will be saved at savePath.
 
     '''
-    subjects=['A01T','A02T','A03T','A04T','A05T','A06T','A07T','A08T','A09T']
-    test_subjects=['A01E','A02E','A03E','A04E','A05E','A06E','A07E','A08E','A09E']
+    # subjects=['A01T','A02T','A03T','A04T','A05T','A06T','A07T','A08T','A09T']
+    # test_subjects=['A01E','A02E','A03E','A04E','A05E','A06E','A07E','A08E','A09E']
+    subjects=['A01T']
+    test_subjects=['A01E']
     subAll = [subjects, test_subjects]
     subL = ['s', 'se'] # s: session 1, se: session 2 (session evaluation)
     
