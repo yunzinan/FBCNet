@@ -11,6 +11,7 @@ import random
 import math
 import copy
 from torch.utils.data import DataLoader
+from scipy.io import loadmat
 
 masterPath = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(1, os.path.join(masterPath, 'centralRepo'))
@@ -141,6 +142,56 @@ def load_lyh_data(sessionId, train_idx=10):
     test_data = {'x': X_test, 'y': y_test, 'c': [i for i in range(14)], 's': fs}
     #(n_chan, 1000, n_trials)
     return train_data, test_data
+    
+def load_bci_data(session="train", train_idx=10):
+    """
+    Attributes
+    ----------
+    - session: str
+        either "train" or "test"
+
+    Return
+    ------
+    - data: np.ndarray
+        should be in the form of (n_trials, n_chans, n_times)
+    - label: np.ndarray
+        should be in the form of (n_trials,)
+    """
+    dir_path = "data/bci42a/rawMat"
+    train_fp = "s001.mat"
+    test_fp = "se001.mat"
+    fs = 250
+
+    train_data = loadmat(os.path.join(dir_path, train_fp))
+    test_data = loadmat(os.path.join(dir_path, test_fp))
+
+    # print(train_data['x'].shape, train_data['y'].shape)
+        
+    if session == "train":
+        X = train_data['x'].transpose((2, 0, 1))
+        shuffle_num = np.random.permutation(len(X))
+        X = X[shuffle_num, :, :]
+        y = train_data['y'].reshape(288,) 
+        y = y[shuffle_num]
+        X_train = X[:train_idx, :, :]
+        y_train = y[:train_idx]
+        X_test = X[train_idx:, :, :]
+        y_test = y[train_idx:]
+    else :
+        X = test_data['x'].transpose((2, 0, 1))
+        shuffle_num = np.random.permutation(len(X))
+        X = X[shuffle_num, :, :]
+        y = test_data['y'].reshape(288,) 
+        y = y[shuffle_num]
+        X_train = X[:train_idx, :, :]
+        y_train = y[:train_idx]
+        X_test = X[train_idx:, :, :]
+        y_test = y[train_idx:]
+        
+    train_data = {'x': X_train, 'y': y_train, 'c': [i for i in range(22)], 's': fs}
+    test_data = {'x': X_test, 'y': y_test, 'c': [i for i in range(22)], 's': fs}
+    #(n_chan, 1000, n_trials)
+    return train_data, test_data
 
 def get_data():
     """
@@ -188,65 +239,64 @@ def get_data():
 if __name__ == "__main__":
     fbcnet = fbcnet.FBCNet()
 
-    _, train_data = load_lyh_data("v2", train_idx=0)
 
-    finetune_data, test_data = load_lyh_data("v3", train_idx=10)
+    # _, train_data = load_lyh_data("v2", train_idx=0)
+    _, train_data = load_bci_data("train", train_idx=0)
 
-    # predicted = []
-    # actual = []
-    # loss = 0
-    # batch_size = 80 
-    # totalCount = 0
-    # # set the network in the eval mode
-    # print("------train set w/o finetune----------")
-    # ans_list = []
-    # tot_cnt = 0
-    # acc_cnt = 0
-
-    # d = train_data
-    # batch_size = 30
-    # tot_batches = d['x'].shape[0] // batch_size
+    # finetune_data, test_data = load_lyh_data("v3", train_idx=10)
+    finetune_data, test_data = load_bci_data(session="test", train_idx=16)
+    print(finetune_data['x'].shape, test_data['x'].shape)
 
 
-    # for batch_idx in range(tot_batches):
-    #     start_idx = batch_idx * batch_size
-    #     end_idx = (batch_idx + 1) * batch_size 
-    #     data = d['x'][start_idx:end_idx, :, :]
-    #     label = d['y'][start_idx:end_idx]
-    #     # print(data.shape)
-    #     # print(data.shape)
-    #     label_list = fbcnet.inference(data) 
-    #     # print(label_list)
-    #     tot_cnt += label_list.shape[0]
-    #     acc_cnt += (label_list == label).sum().item()
+    print("------train set w/o finetune----------")
+    ans_list = []
+    tot_cnt = 0
+    acc_cnt = 0
+
+    d = train_data
+    batch_size = 30
+    tot_batches = d['x'].shape[0] // batch_size
 
 
-    # print(f"tot: {tot_cnt} correct: {acc_cnt} acc: {acc_cnt / tot_cnt}")
-
-    # print("------test set w/o finetune----------")
-    # ans_list = []
-    # tot_cnt = 0
-    # acc_cnt = 0
-
-    # d = test_data
-    # batch_size = 30
-    # tot_batches = d['x'].shape[0] // batch_size
-
-
-    # for batch_idx in range(tot_batches):
-    #     start_idx = batch_idx * batch_size
-    #     end_idx = (batch_idx + 1) * batch_size 
-    #     data = d['x'][start_idx:end_idx, :, :]
-    #     label = d['y'][start_idx:end_idx]
-    #     # print(data.shape)
-    #     # print(data.shape)
-    #     label_list = fbcnet.inference(data) 
-    #     # print(label_list)
-    #     tot_cnt += label_list.shape[0]
-    #     acc_cnt += (label_list == label).sum().item()
+    for batch_idx in range(tot_batches):
+        start_idx = batch_idx * batch_size
+        end_idx = (batch_idx + 1) * batch_size 
+        data = d['x'][start_idx:end_idx, :, :]
+        label = d['y'][start_idx:end_idx]
+        # print(data.shape)
+        # print(data.shape)
+        label_list = fbcnet.inference(data) 
+        # print(label_list)
+        tot_cnt += label_list.shape[0]
+        acc_cnt += (label_list == label).sum().item()
 
 
-    # print(f"tot: {tot_cnt} correct: {acc_cnt} acc: {acc_cnt / tot_cnt}")
+    print(f"tot: {tot_cnt} correct: {acc_cnt} acc: {acc_cnt / tot_cnt}")
+
+    print("------test set w/o finetune----------")
+    ans_list = []
+    tot_cnt = 0
+    acc_cnt = 0
+
+    d = test_data
+    batch_size = 30
+    tot_batches = d['x'].shape[0] // batch_size
+
+
+    for batch_idx in range(tot_batches):
+        start_idx = batch_idx * batch_size
+        end_idx = (batch_idx + 1) * batch_size 
+        data = d['x'][start_idx:end_idx, :, :]
+        label = d['y'][start_idx:end_idx]
+        # print(data.shape)
+        # print(data.shape)
+        label_list = fbcnet.inference(data) 
+        # print(label_list)
+        tot_cnt += label_list.shape[0]
+        acc_cnt += (label_list == label).sum().item()
+
+
+    print(f"tot: {tot_cnt} correct: {acc_cnt} acc: {acc_cnt / tot_cnt}")
     
 
     fbcnet.finetune((finetune_data['x'], finetune_data['y']))
@@ -302,5 +352,4 @@ if __name__ == "__main__":
 
     print(f"tot: {tot_cnt} correct: {acc_cnt} acc: {acc_cnt / tot_cnt}")
 
-    # fbcnet.inference()
     
