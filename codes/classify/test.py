@@ -29,7 +29,7 @@ def load_lyh_data(sessionId, train_idx=10):
     Parameters
     ----------
     - sessionId: str
-        exlusively ("v2", "v3"), which denotes the proper one that will be loaded.
+        exlusively ("v2", "v3", "v4"), which denotes the proper one that will be loaded.
     - train_idx: int 
         for splitting train/test set, defaults to 30
 
@@ -47,24 +47,33 @@ def load_lyh_data(sessionId, train_idx=10):
     dir_path = "data/lyh/originalData"
     left_v2_fp = "left_processed_v2(300).npy"
     left_v3_fp = "left_processed_v3(500).npy"
+    left_v4_fp = "left_processed_v4(500).npy"
     right_v2_fp = "right_processed_v2(300).npy"
     right_v3_fp = "right_processed_v3(500).npy"
+    right_v4_fp = "right_processed_v4(500).npy"
     leg_v2_fp = "leg_processed_v2(300).npy"
     leg_v3_fp = "leg_processed_v3(500).npy"
+    leg_v4_fp = "leg_processed_v4(500).npy"
     nothing_v2_fp = "nothing_processed_v2(300).npy"
     nothing_v3_fp = "nothing_processed_v3(500).npy"
+    nothing_v4_fp = "nothing_processed_v4(500).npy"
     
     # get all the data first
     left_v2 = np.load(os.path.join(dir_path, left_v2_fp))
     left_v3 = np.load(os.path.join(dir_path, left_v3_fp))
+    left_v4 = np.load(os.path.join(dir_path, left_v4_fp))
     right_v2 = np.load(os.path.join(dir_path, right_v2_fp))
     right_v3 = np.load(os.path.join(dir_path, right_v3_fp))
+    right_v4 = np.load(os.path.join(dir_path, right_v4_fp))
     leg_v2 = np.load(os.path.join(dir_path, leg_v2_fp))
     leg_v3 = np.load(os.path.join(dir_path, leg_v3_fp))
+    leg_v4 = np.load(os.path.join(dir_path, leg_v4_fp))
     nothing_v2 = np.load(os.path.join(dir_path, nothing_v2_fp))
     nothing_v3 = np.load(os.path.join(dir_path, nothing_v3_fp))
+    nothing_v4 = np.load(os.path.join(dir_path, nothing_v4_fp))
     eeg_raw_v2 = [left_v2, right_v2, leg_v2]
     eeg_raw_v3 = [left_v3, right_v3, leg_v3]
+    eeg_raw_v4 = [left_v4, right_v4, leg_v4]
 
     fs = 250
     X_train_tot = []
@@ -73,7 +82,13 @@ def load_lyh_data(sessionId, train_idx=10):
     y_test_tot = []
     # X_tot = []
     # y_tot = []
-    eeg_raw = eeg_raw_v2 if sessionId == "v2" else eeg_raw_v3
+    # eeg_raw = eeg_raw_v2 if sessionId == "v2" else eeg_raw_v3
+    if sessionId == "v2":
+        eeg_raw = eeg_raw_v2
+    elif sessionId == "v3":
+        eeg_raw = eeg_raw_v3
+    else:
+        eeg_raw = eeg_raw_v4
 
     for i in range(3):
         # XXX: fixed the bug that you cannot simply reshape the files
@@ -240,10 +255,10 @@ if __name__ == "__main__":
     fbcnet = fbcnet.FBCNet()
 
 
-    _, train_data = load_lyh_data("v2", train_idx=0)
+    _, train_data = load_lyh_data("v3", train_idx=0)
     # _, train_data = load_bci_data("train", train_idx=0)
 
-    finetune_data, test_data = load_lyh_data("v3", train_idx=10)
+    finetune_data, test_data = load_lyh_data("v4", train_idx=30)
     # finetune_data, test_data = load_bci_data(session="test", train_idx=16)
     print(finetune_data['x'].shape, test_data['x'].shape)
 
