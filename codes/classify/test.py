@@ -240,11 +240,11 @@ if __name__ == "__main__":
     fbcnet = fbcnet.FBCNet()
 
 
-    # _, train_data = load_lyh_data("v2", train_idx=0)
-    _, train_data = load_bci_data("train", train_idx=0)
+    _, train_data = load_lyh_data("v2", train_idx=0)
+    # _, train_data = load_bci_data("train", train_idx=0)
 
-    # finetune_data, test_data = load_lyh_data("v3", train_idx=10)
-    finetune_data, test_data = load_bci_data(session="test", train_idx=16)
+    finetune_data, test_data = load_lyh_data("v3", train_idx=10)
+    # finetune_data, test_data = load_bci_data(session="test", train_idx=16)
     print(finetune_data['x'].shape, test_data['x'].shape)
 
 
