@@ -12,6 +12,8 @@ from torch.utils.data import DataLoader, TensorDataset
 import torch.nn as nn
 import torch.optim as optim
 from tqdm import tqdm
+import copy
+import matplotlib.pyplot as plt
 
 import os
 import sys
@@ -110,7 +112,57 @@ class FBCNet:
         print("pre-trained model loaded.")
         self.model = baseModel(net=self.net, resultsSavePath=None, batchSize=config['batchSize'], setRng=False)
 
-    def train(self, X_train, y_train, n_epochs, batch_size, lr=0.001, shuffle=True):
+    def train_valid_split(self, X, y, train_ratio=0.8):
+        """
+        split the (X, y) pairs into training set and validation set
+
+        Attributes
+        ----------
+        - X: np.ndarray, e.g. (30, 14, 250)
+        - y: np.ndarray, e.g. (30,)
+        - train_ratio: how much of the input data will be splitted into training set, default is 0.8
+
+        Return
+        ------
+        - X_train
+        - y_train
+        - X_valid
+        - y_valid
+        """
+        X_list = [[], [], []]
+        y_list = [[], [], []]
+
+        for i in range(len(X)):
+            curX = X[i]
+            curY = y[i]
+            y_list[curY].append(curY) 
+            X_list[curY].append(curX) 
+
+        X_train_list = []
+        X_valid_list = []
+        y_train_list = []
+        y_valid_list = []
+        
+        for i in range(3):
+            # print(len(X_list[i]), len(y_list[i]))
+            n = len(X_list[i])
+            split_idx = int(n * train_ratio)
+            X_train_list.append(X_list[i][:split_idx])
+            y_train_list.append(y_list[i][:split_idx])
+            X_valid_list.append(X_list[i][split_idx:])
+            y_valid_list.append(y_list[i][split_idx:])
+
+        X_train = np.concatenate(X_train_list)
+        y_train = np.concatenate(y_train_list)
+        X_valid = np.concatenate(X_valid_list)
+        y_valid = np.concatenate(y_valid_list)
+
+        print(X_train.shape, y_train.shape, X_valid.shape, y_valid.shape)
+        return X_train, y_train, X_valid, y_valid
+
+
+
+    def train(self, X_train, y_train, X_valid, y_valid, n_epochs, batch_size, lr=0.001, shuffle=True, earlyStop=True):
         """
         train the models for n_epochs
 
@@ -126,26 +178,45 @@ class FBCNet:
         - lr: float
         - shuffle: Boolean
             whether the dataloader will be shuffled or not, defaults to True
+        - earlyStop: Boolean
+            early stop to avoid overfitting, defaults to True
         Return
         ------
         Nothing, but the model state dict will be updated.
         """
 
-        # create the Dataloader
-        X_tensor = X_train.unsqueeze(1)
-        y_tensor = torch.from_numpy(y_train)
+        # for validation and early-stopping
+        best_loss = float('inf')
+        patience = 100 
+        train_loss_list = []
+        valid_loss_list = []
+        best_model_weights = copy.deepcopy(self.net.state_dict())
 
-        dataset = TensorDataset(X_tensor, y_tensor)
-        train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+        # create the Dataloader
+        X_train_tensor = X_train.unsqueeze(1)
+        y_train_tensor = torch.from_numpy(y_train)
+        if len(X_valid) != 0:
+            X_valid_tensor = X_valid.unsqueeze(1)
+            y_valid_tensor = torch.from_numpy(y_valid)
+
+        train_dataset = TensorDataset(X_train_tensor, y_train_tensor)
+        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+        if len(X_valid) != 0:
+            valid_dataset = TensorDataset(X_valid_tensor, y_valid_tensor)
+            valid_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=True)
 
         criterion = nn.NLLLoss()
         optimizer = optim.Adam(self.net.parameters(), lr=lr)
 
         for epoch in range(n_epochs):
+            
             self.net.train()
-
+            tot_loss = 0.0
+            num_samples = 0
             # for inputs, labels in tqdm(train_loader):
             for inputs, labels in train_loader:
+
+                # training
                 inputs = inputs.to(self.device)
                 labels = labels.to(self.device)
 
@@ -154,13 +225,51 @@ class FBCNet:
                 outputs = self.net(inputs)
 
                 loss = criterion(outputs, labels)
+                tot_loss += loss.item() * inputs.size(0)
+                num_samples += inputs.size(0)
 
                 loss.backward()
                 optimizer.step()
+            
+            avg_loss = tot_loss / num_samples
+            train_loss_list.append(avg_loss)
 
+            # validation
+            if len(X_valid) != 0 and len(y_valid) != 0 and earlyStop:
+                self.net.eval()
+                tot_loss = 0.0
+                num_samples = 0
+                with torch.no_grad():
+                    for inputs, labels in valid_loader:
+                        inputs = inputs.to(self.device)
+                        labels = labels.to(self.device)
+                        val_outputs = self.net(inputs)
+                        val_loss = criterion(val_outputs, labels)
+                        tot_loss += val_loss.item() * inputs.size(0)
+                        num_samples += inputs.size(0)
+                
+                avg_loss = tot_loss / num_samples
+                valid_loss_list.append(avg_loss)
 
+                if avg_loss < best_loss:
+                    best_loss = val_loss
+                    best_model_weights = copy.deepcopy(self.net.state_dict())
+                    patience = 100 
+                else:
+                    patience -= 1
+                    if patience == 0:
+                        print(f"Early Stop. Current Epoch: {epoch+1}")
+                        break
+            
+        if len(X_valid) != 0 and len(y_valid) != 0 and earlyStop:
+            self.net.load_state_dict(best_model_weights)
 
-    def finetune(self, data):
+        plt.plot(train_loss_list, label='train loss')
+        plt.plot(valid_loss_list, label='valid loss')
+
+        plt.savefig("loss curve.png")
+
+    def finetune(self, data, train_ratio=0.8):
         """
         Finetune the model on the given data.
 
@@ -171,16 +280,22 @@ class FBCNet:
             ((n_trials, n_chans, n_times), (n_trials,)).
             In particular, ((30, 14, 250), (30,))
 
+        - train_ratio: determines how much of the data will be splitted into training set
+            the rest will be validation set. defaults to 0.8
+
         Return
         ------
         Nothing. but the model state dict will be updated.
         """ 
         # transform the data
         X, y = data  
-        X = self.transform(X)
+        X_train, y_train, X_valid, y_valid = self.train_valid_split(X, y, train_ratio=train_ratio)
+        X_train = self.transform(X_train)
+        if len(X_valid) != 0:
+            X_valid = self.transform(X_valid)
         print("the model will be finetuned.") 
-        print(X.shape, y.shape)
-        self.train(X, y, n_epochs=1500, lr=0.001, batch_size=30)
+        print(X_train.shape, y_train.shape, X_valid.shape, y_valid.shape)
+        self.train(X_train, y_train, X_valid, y_valid, n_epochs=1500, lr=0.001, batch_size=30, earlyStop=True)
 
     def inference(self, data):
         """
