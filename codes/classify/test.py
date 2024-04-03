@@ -61,6 +61,7 @@ def load_lyh_data(sessionId, train_idx=10):
 
     v5_fp = "v5.pkl"
     v5_test_fp = "v5-test.pkl"
+    v5_train_fp = "v5-train.pkl"
 
     # get all the data first
     left_v2 = np.load(os.path.join(dir_path, left_v2_fp))
@@ -80,6 +81,10 @@ def load_lyh_data(sessionId, train_idx=10):
     eeg_raw_v4 = [left_v4, right_v4, leg_v4]
     with open(os.path.join(dir_path, v5_fp), 'rb') as f:
         eeg_raw_v5 = pickle.load(f)
+    with open(os.path.join(dir_path, v5_test_fp), 'rb') as f:
+        eeg_raw_test_v5 = pickle.load(f)
+    with open(os.path.join(dir_path, v5_train_fp), 'rb') as f:
+        eeg_raw_train_v5 = pickle.load(f)
 
     fs = 250
     X_train_tot = []
@@ -103,9 +108,22 @@ def load_lyh_data(sessionId, train_idx=10):
         y_train = eeg_raw['train_session']['y']
         X_test = eeg_raw['test_session']['X_processed']
         y_test = eeg_raw['test_session']['y']
+        # --------------------------------------
+        X_test_new = np.array(eeg_raw_test_v5['X_processed']).squeeze()
+        y_test_new = np.array(eeg_raw_test_v5['y_true'])
+        X_train_new = np.array(eeg_raw_train_v5['X_processed']).squeeze()
+        y_train_new = np.array(eeg_raw_train_v5['y_true'])
+        X_train_add = np.concatenate([X_train, X_train_new])
+        y_train_add = np.concatenate([y_train, y_train_new])
+        X_train_add_2 = np.concatenate([X_test, X_train_new])
+        y_train_add_2 = np.concatenate([y_test, y_train_new])
 
-        train_data = {'x': X_train, 'y': y_train, 'c': [i for i in range(14)], 's': fs}
-        test_data = {'x': X_test, 'y': y_test, 'c': [i for i in range(14)], 's': fs}
+        # train_data = {'x': X_train, 'y': y_train, 'c': [i for i in range(14)], 's': fs}
+        train_data = {'x': X_train_new, 'y': y_train_new, 'c': [i for i in range(14)], 's': fs}
+        # train_data = {'x': X_train_add, 'y': y_train_add, 'c': [i for i in range(14)], 's': fs}
+        # train_data = {'x': X_train_add_2, 'y': y_train_add_2, 'c': [i for i in range(14)], 's': fs}
+        # test_data = {'x': X_test, 'y': y_test, 'c': [i for i in range(14)], 's': fs}
+        test_data = {'x': X_test_new, 'y': y_test_new, 'c': [i for i in range(14)], 's': fs}
         #(n_chan, 1000, n_trials)
         return train_data, test_data
 

@@ -142,8 +142,8 @@ class FBCNet:
 
         for i in range(3):
             shuffle_num = np.random.permutation(len(X_list[i]))
-            X_list[i] = X_list[i][shuffle_num]
-            y_list[i] = y_list[i][shuffle_num]
+            X_list[i] = np.array(X_list[i])[shuffle_num]
+            y_list[i] = np.array(y_list[i])[shuffle_num]
 
         X_train_list = []
         X_valid_list = []
