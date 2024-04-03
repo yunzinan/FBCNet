@@ -110,7 +110,7 @@ class FBCNet:
         # loaded_state_dict = torch.load('models/model_state_dict.pth')
         # self.net.load_state_dict(loaded_state_dict)
         print("pre-trained model loaded.")
-        self.model = baseModel(net=self.net, resultsSavePath=None, batchSize=config['batchSize'], setRng=False)
+        # self.model = baseModel(net=self.net, resultsSavePath=None, batchSize=config['batchSize'], setRng=False)
 
     def train_valid_split(self, X, y, train_ratio=0.8):
         """

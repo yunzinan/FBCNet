@@ -88,6 +88,10 @@ def load_lyh_data(sessionId, train_idx=10):
         eeg_raw_test_v5 = pickle.load(f)
     with open(os.path.join(dir_path, v5_train_fp), 'rb') as f:
         eeg_raw_train_v5 = pickle.load(f)
+    with open(os.path.join(dir_path, v5_1_train_fp), 'rb') as f:
+        eeg_raw_train_v5_1 = pickle.load(f)
+    with open(os.path.join(dir_path, v5_1_test_fp), 'rb') as f:
+        eeg_raw_test_v5_1 = pickle.load(f)
 
     fs = 250
     X_train_tot = []
@@ -116,16 +120,25 @@ def load_lyh_data(sessionId, train_idx=10):
         y_test_new = np.array(eeg_raw_test_v5['y_true'])
         X_train_new = np.array(eeg_raw_train_v5['X_processed']).squeeze()
         y_train_new = np.array(eeg_raw_train_v5['y_true'])
+
+        X_test_5_1 = np.array(eeg_raw_test_v5_1['X_processed']).squeeze()
+        y_test_5_1 = np.array(eeg_raw_test_v5_1['y_true'])
+        X_train_5_1 = np.array(eeg_raw_train_v5_1['X_processed']).squeeze()
+        y_train_5_1 = np.array(eeg_raw_train_v5_1['y_true'])
+
         X_train_add = np.concatenate([X_train, X_train_new])
         y_train_add = np.concatenate([y_train, y_train_new])
         X_train_add_2 = np.concatenate([X_test, X_train_new])
         y_train_add_2 = np.concatenate([y_test, y_train_new])
+        X_train_add_5_1 = np.concatenate([X_train, X_train_5_1])
+        y_train_add_5_1 = np.concatenate([y_train, y_train_5_1])
 
-        train_data = {'x': X_train, 'y': y_train, 'c': [i for i in range(14)], 's': fs}
+        # train_data = {'x': X_train, 'y': y_train, 'c': [i for i in range(14)], 's': fs}
         # train_data = {'x': X_train_new, 'y': y_train_new, 'c': [i for i in range(14)], 's': fs}
         # train_data = {'x': X_train_add, 'y': y_train_add, 'c': [i for i in range(14)], 's': fs}
         # train_data = {'x': X_train_add_2, 'y': y_train_add_2, 'c': [i for i in range(14)], 's': fs}
-        test_data = {'x': X_test, 'y': y_test, 'c': [i for i in range(14)], 's': fs}
+        train_data = {'x': X_train_5_1, 'y': y_train, 'c': [i for i in range(14)], 's': fs}
+        test_data = {'x': X_test_5_1, 'y': y_test_5_1, 'c': [i for i in range(14)], 's': fs}
         # test_data = {'x': X_test_new, 'y': y_test_new, 'c': [i for i in range(14)], 's': fs}
         #(n_chan, 1000, n_trials)
         return train_data, test_data
@@ -388,7 +401,7 @@ if __name__ == "__main__":
     print(f"tot: {tot_cnt} correct: {acc_cnt} acc: {acc_cnt / tot_cnt}")
     
 
-    fbcnet.finetune((finetune_data['x'], finetune_data['y']), train_ratio=0.8, earlyStop=False)
+    fbcnet.finetune((finetune_data['x'], finetune_data['y']), train_ratio=1, earlyStop=False)
 
     # print("------train set after finetune----------")
     # ans_list = []
