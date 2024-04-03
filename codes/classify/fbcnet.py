@@ -197,6 +197,8 @@ class FBCNet:
         patience = 300 
         train_loss_list = []
         valid_loss_list = []
+        train_acc_list = []
+        valid_acc_list = []
         best_model_weights = copy.deepcopy(self.net.state_dict())
 
         # create the Dataloader
@@ -220,6 +222,7 @@ class FBCNet:
             self.net.train()
             tot_loss = 0.0
             num_samples = 0
+            correct = 0
             # for inputs, labels in tqdm(train_loader):
             for inputs, labels in train_loader:
 
@@ -232,13 +235,18 @@ class FBCNet:
                 outputs = self.net(inputs)
                 loss = criterion(outputs, labels)
                 tot_loss += loss.item() * inputs.size(0)
+                _, predicted = torch.max(outputs, dim=1)
                 num_samples += inputs.size(0)
-
+                correct += (predicted == labels).sum().item()
                 loss.backward()
                 optimizer.step()
             
             avg_loss = tot_loss / num_samples
+            acc = correct / num_samples
             train_loss_list.append(avg_loss)
+            train_acc_list.append(acc)
+
+            valid_correct = 0
 
             # validation
             if len(X_valid) != 0 and len(y_valid) != 0:
@@ -250,12 +258,16 @@ class FBCNet:
                         inputs = inputs.to(self.device)
                         labels = labels.to(self.device)
                         val_outputs = self.net(inputs)
+                        _, predicted = torch.max(val_outputs, dim=1)
                         val_loss = criterion(val_outputs, labels)
                         tot_loss += val_loss.item() * inputs.size(0)
+                        valid_correct += (predicted == labels).sum().item()
                         num_samples += inputs.size(0)
                 
                 avg_loss = tot_loss / num_samples
+                valid_acc = valid_correct / num_samples
                 valid_loss_list.append(avg_loss)
+                valid_acc_list.append(valid_acc)
 
                 if avg_loss < best_loss:
                     best_loss = val_loss
@@ -272,6 +284,10 @@ class FBCNet:
 
         plt.plot(train_loss_list, label='train loss')
         plt.plot(valid_loss_list, label='valid loss')
+        plt.plot(train_acc_list, label='train acc')
+        plt.plot(valid_acc_list, label='valid acc')
+
+        plt.legend()
 
         plt.savefig("loss curve.png")
 

@@ -60,8 +60,11 @@ def load_lyh_data(sessionId, train_idx=10):
     nothing_v4_fp = "nothing_processed_v4(500).npy"
 
     v5_fp = "v5.pkl"
-    v5_test_fp = "v5-test.pkl"
     v5_train_fp = "v5-train.pkl"
+    v5_test_fp = "v5-test.pkl"
+    v5_1_train_fp = "v5.1-train.pkl"
+    v5_1_test_fp = "v5.1-test.pkl"
+
 
     # get all the data first
     left_v2 = np.load(os.path.join(dir_path, left_v2_fp))
@@ -118,12 +121,12 @@ def load_lyh_data(sessionId, train_idx=10):
         X_train_add_2 = np.concatenate([X_test, X_train_new])
         y_train_add_2 = np.concatenate([y_test, y_train_new])
 
-        # train_data = {'x': X_train, 'y': y_train, 'c': [i for i in range(14)], 's': fs}
-        train_data = {'x': X_train_new, 'y': y_train_new, 'c': [i for i in range(14)], 's': fs}
+        train_data = {'x': X_train, 'y': y_train, 'c': [i for i in range(14)], 's': fs}
+        # train_data = {'x': X_train_new, 'y': y_train_new, 'c': [i for i in range(14)], 's': fs}
         # train_data = {'x': X_train_add, 'y': y_train_add, 'c': [i for i in range(14)], 's': fs}
         # train_data = {'x': X_train_add_2, 'y': y_train_add_2, 'c': [i for i in range(14)], 's': fs}
-        # test_data = {'x': X_test, 'y': y_test, 'c': [i for i in range(14)], 's': fs}
-        test_data = {'x': X_test_new, 'y': y_test_new, 'c': [i for i in range(14)], 's': fs}
+        test_data = {'x': X_test, 'y': y_test, 'c': [i for i in range(14)], 's': fs}
+        # test_data = {'x': X_test_new, 'y': y_test_new, 'c': [i for i in range(14)], 's': fs}
         #(n_chan, 1000, n_trials)
         return train_data, test_data
 
@@ -302,6 +305,34 @@ if __name__ == "__main__":
     # _, train_data = load_bci_data("train", train_idx=0)
 
     finetune_data, test_data = load_lyh_data("v5", train_idx=10)
+    # v5_train_data, v5_test_data = load_lyh_data("v5", train_idx=10)
+    # v3_train_data, v3_test_data = load_lyh_data("v4", train_idx=1000)
+    # X_train_data = np.concatenate([v3_train_data['x'], v5_train_data['x']]) 
+    # X_test_data = np.concatenate([v5_test_data['x']])
+    # y_train_data = np.concatenate([v3_train_data['y'], v5_train_data['y']])
+    # y_test_data = np.concatenate([v5_test_data['y']])
+
+    # shuffle_num = np.random.permutation(len(X_train_data))
+    # X_train_data = X_train_data[shuffle_num, :, ]
+    # y_train_data = y_train_data[shuffle_num]
+    # shuffle_num = np.random.permutation(len(X_test_data))
+    # X_test_data = X_test_data[shuffle_num, :, :]
+    # y_test_data = y_test_data[shuffle_num]
+
+    # tot_train_data = {
+    #     'x': X_train_data,
+    #     'y': y_train_data,
+    #     'c': v3_train_data['c'],
+    #     's': v3_train_data['s']
+    # }
+    # tot_test_data = {
+    #     'x': X_test_data, 
+    #     'y': y_test_data,
+    #     'c': v3_test_data['c'],
+    #     's': v3_test_data['s'],
+    # }
+    # finetune_data = tot_train_data
+    # test_data = tot_test_data
     # finetune_data, test_data = load_bci_data(session="test", train_idx=16)
     print(finetune_data['x'].shape, test_data['x'].shape)
 
