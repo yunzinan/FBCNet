@@ -138,6 +138,13 @@ class FBCNet:
             y_list[curY].append(curY) 
             X_list[curY].append(curX) 
 
+        # XXX: shuffle the list 
+
+        for i in range(3):
+            shuffle_num = np.random.permutation(len(X_list[i]))
+            X_list[i] = X_list[i][shuffle_num]
+            y_list[i] = y_list[i][shuffle_num]
+
         X_train_list = []
         X_valid_list = []
         y_train_list = []
@@ -187,17 +194,17 @@ class FBCNet:
 
         # for validation and early-stopping
         best_loss = float('inf')
-        patience = 100 
+        patience = 300 
         train_loss_list = []
         valid_loss_list = []
         best_model_weights = copy.deepcopy(self.net.state_dict())
 
         # create the Dataloader
         X_train_tensor = X_train.unsqueeze(1)
-        y_train_tensor = torch.from_numpy(y_train)
+        y_train_tensor = torch.from_numpy(y_train).to(torch.long)
         if len(X_valid) != 0:
             X_valid_tensor = X_valid.unsqueeze(1)
-            y_valid_tensor = torch.from_numpy(y_valid)
+            y_valid_tensor = torch.from_numpy(y_valid).to(torch.long)
 
         train_dataset = TensorDataset(X_train_tensor, y_train_tensor)
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
@@ -223,7 +230,6 @@ class FBCNet:
                 optimizer.zero_grad()
 
                 outputs = self.net(inputs)
-
                 loss = criterion(outputs, labels)
                 tot_loss += loss.item() * inputs.size(0)
                 num_samples += inputs.size(0)
@@ -235,7 +241,7 @@ class FBCNet:
             train_loss_list.append(avg_loss)
 
             # validation
-            if len(X_valid) != 0 and len(y_valid) != 0 and earlyStop:
+            if len(X_valid) != 0 and len(y_valid) != 0:
                 self.net.eval()
                 tot_loss = 0.0
                 num_samples = 0
@@ -254,10 +260,10 @@ class FBCNet:
                 if avg_loss < best_loss:
                     best_loss = val_loss
                     best_model_weights = copy.deepcopy(self.net.state_dict())
-                    patience = 100 
+                    patience = 300
                 else:
                     patience -= 1
-                    if patience == 0:
+                    if patience == 0 and earlyStop:
                         print(f"Early Stop. Current Epoch: {epoch+1}")
                         break
             
@@ -269,7 +275,7 @@ class FBCNet:
 
         plt.savefig("loss curve.png")
 
-    def finetune(self, data, train_ratio=0.8):
+    def finetune(self, data, train_ratio=0.8, earlyStop=True):
         """
         Finetune the model on the given data.
 
@@ -280,8 +286,12 @@ class FBCNet:
             ((n_trials, n_chans, n_times), (n_trials,)).
             In particular, ((30, 14, 250), (30,))
 
-        - train_ratio: determines how much of the data will be splitted into training set
+        - train_ratio: int
+            determines how much of the data will be splitted into training set
             the rest will be validation set. defaults to 0.8
+
+        - earlyStop: Boolean
+            whether the model will early stop to avoid overfitting, defaults to True
 
         Return
         ------
@@ -295,7 +305,7 @@ class FBCNet:
             X_valid = self.transform(X_valid)
         print("the model will be finetuned.") 
         print(X_train.shape, y_train.shape, X_valid.shape, y_valid.shape)
-        self.train(X_train, y_train, X_valid, y_valid, n_epochs=1500, lr=0.001, batch_size=30, earlyStop=True)
+        self.train(X_train, y_train, X_valid, y_valid, n_epochs=1500, lr=0.001, batch_size=30, earlyStop=earlyStop)
 
     def inference(self, data):
         """

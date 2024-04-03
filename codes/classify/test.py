@@ -12,6 +12,7 @@ import math
 import copy
 from torch.utils.data import DataLoader
 from scipy.io import loadmat
+import pickle
 
 masterPath = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(1, os.path.join(masterPath, 'centralRepo'))
@@ -57,7 +58,10 @@ def load_lyh_data(sessionId, train_idx=10):
     nothing_v2_fp = "nothing_processed_v2(300).npy"
     nothing_v3_fp = "nothing_processed_v3(500).npy"
     nothing_v4_fp = "nothing_processed_v4(500).npy"
-    
+
+    v5_fp = "v5.pkl"
+    v5_test_fp = "v5-test.pkl"
+
     # get all the data first
     left_v2 = np.load(os.path.join(dir_path, left_v2_fp))
     left_v3 = np.load(os.path.join(dir_path, left_v3_fp))
@@ -74,6 +78,8 @@ def load_lyh_data(sessionId, train_idx=10):
     eeg_raw_v2 = [left_v2, right_v2, leg_v2]
     eeg_raw_v3 = [left_v3, right_v3, leg_v3]
     eeg_raw_v4 = [left_v4, right_v4, leg_v4]
+    with open(os.path.join(dir_path, v5_fp), 'rb') as f:
+        eeg_raw_v5 = pickle.load(f)
 
     fs = 250
     X_train_tot = []
@@ -89,8 +95,19 @@ def load_lyh_data(sessionId, train_idx=10):
         eeg_raw = eeg_raw_v2
     elif sessionId == "v3":
         eeg_raw = eeg_raw_v3
-    else:
+    elif sessionId == "v4":
         eeg_raw = eeg_raw_v4
+    else:
+        eeg_raw = eeg_raw_v5 
+        X_train = eeg_raw['train_session']['X_processed']
+        y_train = eeg_raw['train_session']['y']
+        X_test = eeg_raw['test_session']['X_processed']
+        y_test = eeg_raw['test_session']['y']
+
+        train_data = {'x': X_train, 'y': y_train, 'c': [i for i in range(14)], 's': fs}
+        test_data = {'x': X_test, 'y': y_test, 'c': [i for i in range(14)], 's': fs}
+        #(n_chan, 1000, n_trials)
+        return train_data, test_data
 
     for i in range(3):
         # XXX: fixed the bug that you cannot simply reshape the files
@@ -266,7 +283,7 @@ if __name__ == "__main__":
     # _, train_data = load_lyh_data("v3", train_idx=0)
     # _, train_data = load_bci_data("train", train_idx=0)
 
-    finetune_data, test_data = load_lyh_data("v3", train_idx=10)
+    finetune_data, test_data = load_lyh_data("v5", train_idx=10)
     # finetune_data, test_data = load_bci_data(session="test", train_idx=16)
     print(finetune_data['x'].shape, test_data['x'].shape)
 
@@ -322,7 +339,7 @@ if __name__ == "__main__":
     print(f"tot: {tot_cnt} correct: {acc_cnt} acc: {acc_cnt / tot_cnt}")
     
 
-    fbcnet.finetune((finetune_data['x'], finetune_data['y']), train_ratio=1)
+    fbcnet.finetune((finetune_data['x'], finetune_data['y']), train_ratio=0.8, earlyStop=False)
 
     # print("------train set after finetune----------")
     # ans_list = []
